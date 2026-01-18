@@ -43,3 +43,100 @@ class InstancedMetric(BaseModel):
     aggregate: float | None = Field(
         default=None, description="Optional rollup (sum/avg) for quick reference"
     )
+
+
+class CPUMetrics(BaseModel):
+    """CPU utilization summary."""
+
+    user_percent: float = Field(description="User CPU time percentage")
+    system_percent: float = Field(description="System CPU time percentage")
+    idle_percent: float = Field(description="Idle CPU time percentage")
+    iowait_percent: float = Field(description="I/O wait percentage")
+    ncpu: int = Field(description="Number of CPUs")
+    assessment: str = Field(description="Brief interpretation of CPU state")
+
+
+class MemoryMetrics(BaseModel):
+    """Memory utilization summary."""
+
+    total_bytes: int = Field(description="Total physical memory")
+    used_bytes: int = Field(description="Used memory")
+    free_bytes: int = Field(description="Free memory")
+    available_bytes: int = Field(description="Available memory for applications")
+    cached_bytes: int = Field(description="Cached memory")
+    buffers_bytes: int = Field(description="Buffer memory")
+    swap_used_bytes: int = Field(description="Used swap space")
+    swap_total_bytes: int = Field(description="Total swap space")
+    used_percent: float = Field(description="Memory usage percentage")
+    assessment: str = Field(description="Brief interpretation of memory state")
+
+
+class DiskMetrics(BaseModel):
+    """Disk I/O summary."""
+
+    read_bytes_per_sec: float = Field(description="Read throughput in bytes/sec")
+    write_bytes_per_sec: float = Field(description="Write throughput in bytes/sec")
+    reads_per_sec: float = Field(description="Read operations per second")
+    writes_per_sec: float = Field(description="Write operations per second")
+    assessment: str = Field(description="Brief interpretation of disk I/O state")
+
+
+class NetworkMetrics(BaseModel):
+    """Network I/O summary."""
+
+    in_bytes_per_sec: float = Field(description="Inbound throughput in bytes/sec")
+    out_bytes_per_sec: float = Field(description="Outbound throughput in bytes/sec")
+    in_packets_per_sec: float = Field(description="Inbound packets per second")
+    out_packets_per_sec: float = Field(description="Outbound packets per second")
+    assessment: str = Field(description="Brief interpretation of network state")
+
+
+class LoadMetrics(BaseModel):
+    """System load summary."""
+
+    load_1m: float = Field(description="1-minute load average")
+    load_5m: float = Field(description="5-minute load average")
+    load_15m: float = Field(description="15-minute load average")
+    runnable: int = Field(description="Number of runnable processes")
+    nprocs: int = Field(description="Total number of processes")
+    assessment: str = Field(description="Brief interpretation of load state")
+
+
+class SystemSnapshot(BaseModel):
+    """Point-in-time system health overview."""
+
+    timestamp: str = Field(description="ISO8601 timestamp")
+    hostname: str = Field(description="Target host name")
+    cpu: CPUMetrics | None = Field(default=None, description="CPU metrics if requested")
+    memory: MemoryMetrics | None = Field(default=None, description="Memory metrics if requested")
+    disk: DiskMetrics | None = Field(default=None, description="Disk I/O metrics if requested")
+    network: NetworkMetrics | None = Field(
+        default=None, description="Network I/O metrics if requested"
+    )
+    load: LoadMetrics | None = Field(default=None, description="Load metrics if requested")
+
+
+class ProcessInfo(BaseModel):
+    """A process with resource consumption details."""
+
+    pid: int = Field(description="Process ID")
+    command: str = Field(description="Command name")
+    cmdline: str = Field(description="Full command line (truncated)")
+    cpu_percent: float | None = Field(default=None, description="CPU usage percentage")
+    rss_bytes: int = Field(description="Resident set size in bytes")
+    rss_percent: float = Field(description="RSS as percentage of total memory")
+    io_read_bytes_per_sec: float | None = Field(default=None, description="Read bytes/sec")
+    io_write_bytes_per_sec: float | None = Field(default=None, description="Write bytes/sec")
+
+
+class ProcessTopResult(BaseModel):
+    """Top processes by resource consumption."""
+
+    timestamp: str = Field(description="ISO8601 timestamp")
+    hostname: str = Field(description="Target host name")
+    sort_by: str = Field(description="Resource used for sorting")
+    sample_interval: float = Field(description="Sampling interval used")
+    processes: list[ProcessInfo] = Field(description="Top processes sorted by requested resource")
+    total_memory_bytes: int = Field(description="Total system memory")
+    ncpu: int = Field(description="Number of CPUs")
+    assessment: str = Field(description="Brief interpretation of top processes")
