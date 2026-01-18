@@ -11,38 +11,29 @@ from pcp_mcp import main
 
 
 class TestCLI:
+    @pytest.mark.parametrize(
+        ("argv", "expected_transport"),
+        [
+            (["pcp-mcp"], "stdio"),
+            (["pcp-mcp", "--transport", "sse"], "sse"),
+            (["pcp-mcp", "--transport", "streamable-http"], "streamable-http"),
+        ],
+    )
     @patch("pcp_mcp.server.create_server")
-    def test_main_runs_server_with_default_transport(self, mock_create_server: MagicMock) -> None:
-        mock_server = MagicMock()
-        mock_create_server.return_value = mock_server
-
-        with patch("sys.argv", ["pcp-mcp"]):
-            main()
-
-        mock_create_server.assert_called_once()
-        mock_server.run.assert_called_once_with(transport="stdio")
-
-    @patch("pcp_mcp.server.create_server")
-    def test_main_runs_server_with_sse_transport(self, mock_create_server: MagicMock) -> None:
-        mock_server = MagicMock()
-        mock_create_server.return_value = mock_server
-
-        with patch("sys.argv", ["pcp-mcp", "--transport", "sse"]):
-            main()
-
-        mock_server.run.assert_called_once_with(transport="sse")
-
-    @patch("pcp_mcp.server.create_server")
-    def test_main_runs_server_with_streamable_http_transport(
-        self, mock_create_server: MagicMock
+    def test_main_runs_server_with_transport(
+        self,
+        mock_create_server: MagicMock,
+        argv: list[str],
+        expected_transport: str,
     ) -> None:
         mock_server = MagicMock()
         mock_create_server.return_value = mock_server
 
-        with patch("sys.argv", ["pcp-mcp", "--transport", "streamable-http"]):
+        with patch("sys.argv", argv):
             main()
 
-        mock_server.run.assert_called_once_with(transport="streamable-http")
+        mock_create_server.assert_called_once()
+        mock_server.run.assert_called_once_with(transport=expected_transport)
 
     @patch("pcp_mcp.server.create_server")
     def test_main_sets_target_host_env_var(self, mock_create_server: MagicMock) -> None:

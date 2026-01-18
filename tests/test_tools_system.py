@@ -17,23 +17,12 @@ from pcp_mcp.tools.system import (
 )
 
 
-def _capture_tools(mcp: MagicMock) -> dict:
-    tools: dict = {}
-
-    def capture_tool():
-        def decorator(fn):
-            tools[fn.__name__] = fn
-            return fn
-
-        return decorator
-
-    mcp.tool = capture_tool
-    register_system_tools(mcp)
-    return tools
-
-
 class TestGetSystemSnapshot:
-    async def test_returns_all_categories(self, mock_context: MagicMock) -> None:
+    async def test_returns_all_categories(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].fetch_with_rates.return_value = {
             "kernel.all.cpu.user": {"instances": {-1: 50.0}, "is_rate": True},
             "kernel.all.cpu.sys": {"instances": {-1: 20.0}, "is_rate": True},
@@ -76,8 +65,7 @@ class TestGetSystemSnapshot:
             },
         }
 
-        mcp = MagicMock()
-        tools = _capture_tools(mcp)
+        tools = capture_tools(register_system_tools)
 
         result = await tools["get_system_snapshot"](mock_context)
 
@@ -88,7 +76,11 @@ class TestGetSystemSnapshot:
         assert result.network is not None
         assert result.hostname == "localhost"
 
-    async def test_returns_subset_categories(self, mock_context: MagicMock) -> None:
+    async def test_returns_subset_categories(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].fetch_with_rates.return_value = {
             "kernel.all.cpu.user": {"instances": {-1: 50.0}, "is_rate": True},
             "kernel.all.cpu.sys": {"instances": {-1: 20.0}, "is_rate": True},
@@ -97,8 +89,7 @@ class TestGetSystemSnapshot:
             "hinv.ncpu": {"instances": {-1: 4}, "is_rate": False},
         }
 
-        mcp = MagicMock()
-        tools = _capture_tools(mcp)
+        tools = capture_tools(register_system_tools)
 
         result = await tools["get_system_snapshot"](mock_context, categories=["cpu"])
 
@@ -108,22 +99,29 @@ class TestGetSystemSnapshot:
         assert result.disk is None
         assert result.network is None
 
-    async def test_handles_error(self, mock_context: MagicMock) -> None:
+    async def test_handles_error(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         import httpx
 
         mock_context.request_context.lifespan_context[
             "client"
         ].fetch_with_rates.side_effect = httpx.ConnectError("Connection refused")
 
-        mcp = MagicMock()
-        tools = _capture_tools(mcp)
+        tools = capture_tools(register_system_tools)
 
         with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
             await tools["get_system_snapshot"](mock_context)
 
 
 class TestGetProcessTop:
-    async def test_returns_top_processes(self, mock_context: MagicMock) -> None:
+    async def test_returns_top_processes(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].fetch_with_rates.return_value = {
             "proc.psinfo.pid": {"instances": {1: 1234, 2: 5678}, "is_rate": False},
             "proc.psinfo.cmd": {"instances": {1: "python", 2: "nginx"}, "is_rate": False},
@@ -142,8 +140,7 @@ class TestGetProcessTop:
             ]
         }
 
-        mcp = MagicMock()
-        tools = _capture_tools(mcp)
+        tools = capture_tools(register_system_tools)
 
         result = await tools["get_process_top"](mock_context, sort_by="cpu", limit=2)
 

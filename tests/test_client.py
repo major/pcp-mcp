@@ -128,12 +128,24 @@ class TestPCPClientFetch:
             result = await client.fetch(["hinv.ncpu", "mem.physmem"])
             assert len(result["values"]) == 2
 
-    async def test_fetch_raises_if_not_connected(self) -> None:
-        """Test that fetch raises RuntimeError if not connected."""
+    @pytest.mark.parametrize(
+        ("method_name", "args"),
+        [
+            ("fetch", (["kernel.all.load"],)),
+            ("search", ("kernel",)),
+            ("describe", ("kernel.all.load",)),
+        ],
+    )
+    async def test_method_raises_if_not_connected(
+        self,
+        method_name: str,
+        args: tuple,
+    ) -> None:
         client = PCPClient(base_url="http://localhost:44322")
 
         with pytest.raises(RuntimeError, match="Client not connected"):
-            await client.fetch(["kernel.all.load"])
+            method = getattr(client, method_name)
+            await method(*args)
 
 
 class TestPCPClientSearch:
@@ -169,13 +181,6 @@ class TestPCPClientSearch:
         async with PCPClient(base_url="http://localhost:44322") as client:
             result = await client.search("nonexistent.metric")
             assert result == []
-
-    async def test_search_raises_if_not_connected(self) -> None:
-        """Test that search raises RuntimeError if not connected."""
-        client = PCPClient(base_url="http://localhost:44322")
-
-        with pytest.raises(RuntimeError, match="Client not connected"):
-            await client.search("kernel")
 
 
 class TestPCPClientDescribe:
@@ -215,13 +220,6 @@ class TestPCPClientDescribe:
         async with PCPClient(base_url="http://localhost:44322") as client:
             result = await client.describe("nonexistent.metric")
             assert result == {}
-
-    async def test_describe_raises_if_not_connected(self) -> None:
-        """Test that describe raises RuntimeError if not connected."""
-        client = PCPClient(base_url="http://localhost:44322")
-
-        with pytest.raises(RuntimeError, match="Client not connected"):
-            await client.describe("kernel.all.load")
 
 
 class TestPCPClientFetchWithRates:

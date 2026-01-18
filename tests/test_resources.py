@@ -8,23 +8,12 @@ from pcp_mcp.resources.health import register_health_resources
 from pcp_mcp.resources.metrics import register_metrics_resources
 
 
-def _capture_resources(mcp: MagicMock, register_fn) -> dict:
-    resources: dict = {}
-
-    def capture_resource(uri: str):
-        def decorator(fn):
-            resources[uri] = fn
-            return fn
-
-        return decorator
-
-    mcp.resource = capture_resource
-    register_fn(mcp)
-    return resources
-
-
 class TestHealthResource:
-    async def test_returns_health_summary(self, mock_context: MagicMock) -> None:
+    async def test_returns_health_summary(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].fetch_with_rates.return_value = {
             "kernel.all.cpu.user": {"instances": {-1: 20.0}, "is_rate": True},
             "kernel.all.cpu.sys": {"instances": {-1: 10.0}, "is_rate": True},
@@ -47,8 +36,7 @@ class TestHealthResource:
             "kernel.all.nprocs": {"instances": {-1: 200}, "is_rate": False},
         }
 
-        mcp = MagicMock()
-        resources = _capture_resources(mcp, register_health_resources)
+        resources = capture_resources(register_health_resources)
 
         result = await resources["pcp://health"](mock_context)
 
@@ -58,13 +46,16 @@ class TestHealthResource:
         assert "Load" in result
         assert "localhost" in result
 
-    async def test_handles_error(self, mock_context: MagicMock) -> None:
+    async def test_handles_error(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
         mock_context.request_context.lifespan_context[
             "client"
         ].fetch_with_rates.side_effect = Exception("Connection failed")
 
-        mcp = MagicMock()
-        resources = _capture_resources(mcp, register_health_resources)
+        resources = capture_resources(register_health_resources)
 
         result = await resources["pcp://health"](mock_context)
 
@@ -73,14 +64,18 @@ class TestHealthResource:
 
 
 class TestMetricsResource:
-    async def test_browse_metrics(self, mock_context: MagicMock) -> None:
+    async def test_browse_metrics(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].search.return_value = [
             {"name": "kernel.all.cpu.user", "text-oneline": "User CPU time"},
             {"name": "kernel.all.cpu.sys", "text-oneline": "System CPU time"},
         ]
 
         mcp = MagicMock()
-        resources = _capture_resources(mcp, register_metrics_resources)
+        resources = capture_resources(register_metrics_resources)
 
         result = await resources["pcp://metrics/{pattern}"](mock_context, pattern="kernel.all.cpu")
 
@@ -88,17 +83,25 @@ class TestMetricsResource:
         assert "kernel.all.cpu.sys" in result
         assert "User CPU time" in result
 
-    async def test_browse_metrics_empty(self, mock_context: MagicMock) -> None:
+    async def test_browse_metrics_empty(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].search.return_value = []
 
         mcp = MagicMock()
-        resources = _capture_resources(mcp, register_metrics_resources)
+        resources = capture_resources(register_metrics_resources)
 
         result = await resources["pcp://metrics/{pattern}"](mock_context, pattern="nonexistent")
 
         assert "No metrics found" in result
 
-    async def test_metric_detail(self, mock_context: MagicMock) -> None:
+    async def test_metric_detail(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {
             "name": "kernel.all.cpu.user",
             "type": "U64",
@@ -108,7 +111,7 @@ class TestMetricsResource:
         }
 
         mcp = MagicMock()
-        resources = _capture_resources(mcp, register_metrics_resources)
+        resources = capture_resources(register_metrics_resources)
 
         result = await resources["pcp://metric/{name}"](mock_context, name="kernel.all.cpu.user")
 
@@ -118,11 +121,15 @@ class TestMetricsResource:
         assert "millisec" in result
         assert "Time spent in user mode" in result
 
-    async def test_metric_detail_not_found(self, mock_context: MagicMock) -> None:
+    async def test_metric_detail_not_found(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {}
 
         mcp = MagicMock()
-        resources = _capture_resources(mcp, register_metrics_resources)
+        resources = capture_resources(register_metrics_resources)
 
         result = await resources["pcp://metric/{name}"](mock_context, name="nonexistent")
 

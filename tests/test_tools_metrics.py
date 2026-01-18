@@ -10,16 +10,12 @@ from fastmcp.exceptions import ToolError
 from pcp_mcp.tools.metrics import register_metrics_tools
 
 
-@pytest.fixture
-def mcp_with_tools(mock_context: MagicMock) -> MagicMock:
-    mcp = MagicMock()
-    mcp.tool = MagicMock(return_value=lambda fn: fn)
-    register_metrics_tools(mcp)
-    return mcp
-
-
 class TestQueryMetrics:
-    async def test_query_metrics_returns_values(self, mock_context: MagicMock) -> None:
+    async def test_query_metrics_returns_values(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].fetch.return_value = {
             "values": [
                 {
@@ -32,20 +28,7 @@ class TestQueryMetrics:
             ]
         }
 
-        from pcp_mcp.tools.metrics import register_metrics_tools
-
-        mcp = MagicMock()
-        tools: dict = {}
-
-        def capture_tool():
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp.tool = capture_tool
-        register_metrics_tools(mcp)
+        tools = capture_tools(register_metrics_tools)
 
         result = await tools["query_metrics"](mock_context, names=["kernel.all.load"])
 
@@ -55,7 +38,11 @@ class TestQueryMetrics:
         assert result[0].instance == "1 minute"
         assert result[1].instance == "5 minute"
 
-    async def test_query_metrics_handles_no_instance(self, mock_context: MagicMock) -> None:
+    async def test_query_metrics_handles_no_instance(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].fetch.return_value = {
             "values": [
                 {
@@ -65,20 +52,7 @@ class TestQueryMetrics:
             ]
         }
 
-        from pcp_mcp.tools.metrics import register_metrics_tools
-
-        mcp = MagicMock()
-        tools: dict = {}
-
-        def capture_tool():
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp.tool = capture_tool
-        register_metrics_tools(mcp)
+        tools = capture_tools(register_metrics_tools)
 
         result = await tools["query_metrics"](mock_context, names=["hinv.ncpu"])
 
@@ -86,53 +60,35 @@ class TestQueryMetrics:
         assert result[0].instance is None
         assert result[0].value == 8
 
-    async def test_query_metrics_raises_on_error(self, mock_context: MagicMock) -> None:
+    async def test_query_metrics_raises_on_error(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         import httpx
 
         mock_context.request_context.lifespan_context[
             "client"
         ].fetch.side_effect = httpx.ConnectError("Connection refused")
 
-        from pcp_mcp.tools.metrics import register_metrics_tools
-
-        mcp = MagicMock()
-        tools: dict = {}
-
-        def capture_tool():
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp.tool = capture_tool
-        register_metrics_tools(mcp)
+        tools = capture_tools(register_metrics_tools)
 
         with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
             await tools["query_metrics"](mock_context, names=["kernel.all.load"])
 
 
 class TestSearchMetrics:
-    async def test_search_metrics_returns_results(self, mock_context: MagicMock) -> None:
+    async def test_search_metrics_returns_results(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].search.return_value = [
             {"name": "kernel.all.cpu.user", "text-oneline": "User CPU time"},
             {"name": "kernel.all.cpu.sys", "text-help": "System CPU time"},
         ]
 
-        from pcp_mcp.tools.metrics import register_metrics_tools
-
-        mcp = MagicMock()
-        tools: dict = {}
-
-        def capture_tool():
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp.tool = capture_tool
-        register_metrics_tools(mcp)
+        tools = capture_tools(register_metrics_tools)
 
         result = await tools["search_metrics"](mock_context, pattern="kernel.all.cpu")
 
@@ -141,23 +97,14 @@ class TestSearchMetrics:
         assert result[0].help_text == "User CPU time"
         assert result[1].help_text == "System CPU time"
 
-    async def test_search_metrics_empty_results(self, mock_context: MagicMock) -> None:
+    async def test_search_metrics_empty_results(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].search.return_value = []
 
-        from pcp_mcp.tools.metrics import register_metrics_tools
-
-        mcp = MagicMock()
-        tools: dict = {}
-
-        def capture_tool():
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp.tool = capture_tool
-        register_metrics_tools(mcp)
+        tools = capture_tools(register_metrics_tools)
 
         result = await tools["search_metrics"](mock_context, pattern="nonexistent")
 
@@ -165,7 +112,11 @@ class TestSearchMetrics:
 
 
 class TestDescribeMetric:
-    async def test_describe_metric_returns_info(self, mock_context: MagicMock) -> None:
+    async def test_describe_metric_returns_info(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {
             "name": "kernel.all.cpu.user",
             "type": "U64",
@@ -174,20 +125,7 @@ class TestDescribeMetric:
             "text-help": "Time spent in user mode",
         }
 
-        from pcp_mcp.tools.metrics import register_metrics_tools
-
-        mcp = MagicMock()
-        tools: dict = {}
-
-        def capture_tool():
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp.tool = capture_tool
-        register_metrics_tools(mcp)
+        tools = capture_tools(register_metrics_tools)
 
         result = await tools["describe_metric"](mock_context, name="kernel.all.cpu.user")
 
@@ -197,28 +135,23 @@ class TestDescribeMetric:
         assert result.units == "millisec"
         assert result.help_text == "Time spent in user mode"
 
-    async def test_describe_metric_not_found(self, mock_context: MagicMock) -> None:
+    async def test_describe_metric_not_found(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {}
 
-        from pcp_mcp.tools.metrics import register_metrics_tools
-
-        mcp = MagicMock()
-        tools: dict = {}
-
-        def capture_tool():
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp.tool = capture_tool
-        register_metrics_tools(mcp)
+        tools = capture_tools(register_metrics_tools)
 
         with pytest.raises(ToolError, match="Metric not found"):
             await tools["describe_metric"](mock_context, name="nonexistent.metric")
 
-    async def test_describe_metric_formats_units_fallback(self, mock_context: MagicMock) -> None:
+    async def test_describe_metric_formats_units_fallback(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {
             "name": "disk.all.read_bytes",
             "type": "U64",
@@ -228,20 +161,7 @@ class TestDescribeMetric:
             "units-time": "sec",
         }
 
-        from pcp_mcp.tools.metrics import register_metrics_tools
-
-        mcp = MagicMock()
-        tools: dict = {}
-
-        def capture_tool():
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp.tool = capture_tool
-        register_metrics_tools(mcp)
+        tools = capture_tools(register_metrics_tools)
 
         result = await tools["describe_metric"](mock_context, name="disk.all.read_bytes")
 
