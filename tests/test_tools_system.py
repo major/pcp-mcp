@@ -8,8 +8,6 @@ import pytest
 from fastmcp.exceptions import ToolError
 
 from pcp_mcp.tools.system import (
-    COUNTER_METRICS,
-    SNAPSHOT_METRICS,
     register_system_tools,
 )
 from pcp_mcp.utils.builders import (

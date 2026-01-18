@@ -105,6 +105,7 @@ def register_metrics_tools(mcp: FastMCP) -> None:
         Use this to understand what a metric measures and how to interpret it.
         """
         from fastmcp.exceptions import ToolError
+
         from pcp_mcp.errors import handle_pcp_error
 
         client = get_client(ctx)

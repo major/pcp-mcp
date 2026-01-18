@@ -43,6 +43,8 @@ dev = [
     "ruff>=0.9",
     "radon>=6",
     "pytest-randomly>=4.0.1",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.27",
 ]
 
 [tool.uv.build-backend]

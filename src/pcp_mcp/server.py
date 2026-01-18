@@ -61,7 +61,8 @@ Common troubleshooting workflows:
 - "High CPU usage" → get_process_top(sort_by="cpu") + query_metrics(["kernel.all.cpu.*"])
 - "Memory pressure" → get_system_snapshot(categories=["memory"]) + search_metrics("mem.util")
 - "Disk I/O issues" → get_system_snapshot(categories=["disk"]) + search_metrics("disk.dev")
-- "Network saturation" → get_system_snapshot(categories=["network"]) + search_metrics("network.interface")
+- "Network saturation" → get_system_snapshot(categories=["network"]) +
+  search_metrics("network.interface")
 
 📊 METRIC NAMESPACE GUIDE
 
