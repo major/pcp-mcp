@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 from fastmcp import Context
 from fastmcp.exceptions import ToolError
 
+from pcp_mcp.client import PCPClient
+
 if TYPE_CHECKING:
-    from pcp_mcp.client import PCPClient
     from pcp_mcp.config import PCPMCPSettings
 
 
@@ -55,3 +58,36 @@ def get_settings(ctx: Context) -> PCPMCPSettings:
     """
     _validate_context(ctx)
     return ctx.request_context.lifespan_context["settings"]
+
+
+@asynccontextmanager
+async def get_client_for_host(ctx: Context, host: str | None = None) -> AsyncIterator[PCPClient]:
+    """Get a PCPClient for the specified host.
+
+    If host is None or matches the configured target_host, yields the existing
+    lifespan client. Otherwise, creates a new ad-hoc client for the specified
+    hostspec and cleans it up on exit.
+
+    Args:
+        ctx: MCP context.
+        host: Target pmcd hostspec to query. None uses the default.
+
+    Yields:
+        PCPClient connected to the specified host.
+
+    Raises:
+        ToolError: If context is not available or host is unreachable.
+    """
+    settings = get_settings(ctx)
+
+    if host is None or host == settings.target_host:
+        yield get_client(ctx)
+        return
+
+    async with PCPClient(
+        base_url=settings.base_url,
+        target_host=host,
+        auth=settings.auth,
+        timeout=settings.timeout,
+    ) as client:
+        yield client
