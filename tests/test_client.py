@@ -222,6 +222,92 @@ class TestPCPClientDescribe:
             assert result == {}
 
 
+class TestPCPClientContextRecreation:
+    """Tests for automatic context recreation on expiration."""
+
+    @respx.mock
+    async def test_fetch_recreates_context_on_expiration(self) -> None:
+        respx.get("/pmapi/context").mock(
+            side_effect=[
+                Response(200, json={"context": 1}),
+                Response(200, json={"context": 2}),
+            ]
+        )
+        respx.get("/pmapi/fetch").mock(
+            side_effect=[
+                Response(400, json={"message": "unknown context identifier"}),
+                Response(
+                    200,
+                    json={
+                        "timestamp": {"s": 1000, "us": 0},
+                        "values": [{"name": "hinv.ncpu", "instances": [{"value": 4}]}],
+                    },
+                ),
+            ]
+        )
+
+        async with PCPClient(base_url="http://localhost:44322") as client:
+            assert client.context_id == 1
+            result = await client.fetch(["hinv.ncpu"])
+            assert client.context_id == 2
+            assert result["values"][0]["instances"][0]["value"] == 4
+
+    @respx.mock
+    async def test_search_recreates_context_on_expiration(self) -> None:
+        respx.get("/pmapi/context").mock(
+            side_effect=[
+                Response(200, json={"context": 1}),
+                Response(200, json={"context": 2}),
+            ]
+        )
+        respx.get("/pmapi/metric").mock(
+            side_effect=[
+                Response(400, json={"message": "unknown context identifier"}),
+                Response(200, json={"metrics": [{"name": "kernel.all.load"}]}),
+            ]
+        )
+
+        async with PCPClient(base_url="http://localhost:44322") as client:
+            assert client.context_id == 1
+            result = await client.search("kernel")
+            assert client.context_id == 2
+            assert len(result) == 1
+
+    @respx.mock
+    async def test_describe_recreates_context_on_expiration(self) -> None:
+        respx.get("/pmapi/context").mock(
+            side_effect=[
+                Response(200, json={"context": 1}),
+                Response(200, json={"context": 2}),
+            ]
+        )
+        respx.get("/pmapi/metric").mock(
+            side_effect=[
+                Response(400, json={"message": "unknown context identifier"}),
+                Response(200, json={"metrics": [{"name": "hinv.ncpu", "sem": "instant"}]}),
+            ]
+        )
+
+        async with PCPClient(base_url="http://localhost:44322") as client:
+            assert client.context_id == 1
+            result = await client.describe("hinv.ncpu")
+            assert client.context_id == 2
+            assert result["sem"] == "instant"
+
+    @respx.mock
+    async def test_does_not_recreate_on_other_400_errors(self) -> None:
+        respx.get("/pmapi/context").mock(return_value=Response(200, json={"context": 1}))
+        respx.get("/pmapi/fetch").mock(
+            return_value=Response(400, json={"message": "invalid metric name"})
+        )
+
+        async with PCPClient(base_url="http://localhost:44322") as client:
+            resp = await client._request_with_retry(
+                "GET", url="/pmapi/fetch", params={"context": 1, "names": "bad.metric"}
+            )
+            assert resp.status_code == 400
+
+
 class TestPCPClientFetchWithRates:
     """Tests for fetch_with_rates method."""
 
