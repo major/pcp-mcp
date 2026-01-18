@@ -72,7 +72,7 @@ class ClientManager:
             auth=self._auth,
             timeout=self._timeout,
         )
-        
+
         try:
             await client.__aenter__()
         except Exception:
@@ -90,11 +90,11 @@ class ClientManager:
 
     async def close_all(self) -> None:
         """Close all managed client connections.
-        
+
         Attempts to close all clients, collecting any exceptions that occur.
         """
         exceptions = []
-        
+
         if self._default_client:
             try:
                 await self._default_client.__aexit__(None, None, None)
@@ -109,7 +109,7 @@ class ClientManager:
             except Exception as e:
                 exceptions.append(e)
         self._clients.clear()
-        
+
         # If any exceptions occurred, raise the first one
         if exceptions:
             raise exceptions[0]
