@@ -5,9 +5,9 @@ pcp-mcp can monitor any host running PCP's `pmcd` daemon. There are two architec
 ## Architecture 1: Remote Target via Local pmproxy
 
 ```
-┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐
+┌─────────┐         ┌─────────┐          ┌─────────┐         ┌─────────┐
 │   LLM   │ ◄─MCP─► │ pcp-mcp │ ◄─HTTP─► │ pmproxy │ ◄─────► │  pmcd   │
-└─────────┘         └─────────┘         │ (local) │         │ (remote)│
+└─────────┘         └─────────┘          │ (local) │         │ (remote)│
                                          └─────────┘         └─────────┘
 ```
 
@@ -34,9 +34,9 @@ pcp-mcp
 ## Architecture 2: Remote pmproxy
 
 ```
-┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐
+┌─────────┐         ┌─────────┐          ┌─────────┐         ┌─────────┐
 │   LLM   │ ◄─MCP─► │ pcp-mcp │ ◄─HTTP─► │ pmproxy │ ◄─────► │  pmcd   │
-└─────────┘         └─────────┘         │ (remote)│         │ (remote)│
+└─────────┘         └─────────┘          │ (remote)│         │ (remote)│
                                          └─────────┘         └─────────┘
 ```
 
