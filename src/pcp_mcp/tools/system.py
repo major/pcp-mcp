@@ -113,21 +113,13 @@ def register_system_tools(mcp: FastMCP) -> None:
             ),
         ] = 1.0,
     ) -> SystemSnapshot:
-        """Get a point-in-time system health overview.
-
-        Returns CPU, memory, disk I/O, network I/O, and load metrics in a single
-        call. For rate metrics (CPU %, disk I/O, network throughput), takes two
-        samples to calculate per-second rates.
-
-        Use this tool FIRST for system troubleshooting. It automatically handles
-        counter-to-rate conversion. Do NOT use query_metrics() for CPU, disk, or
-        network counters - those return raw cumulative values since boot.
-
-        Examples:
-            get_system_snapshot() - Quick health check (default categories)
-            get_system_snapshot(categories=["cpu", "memory"]) - CPU and memory only
-            get_system_snapshot(categories=["disk", "filesystem"]) - Storage analysis
-            get_system_snapshot(categories=["hardware"]) - System inventory
+        """
+        Provide a point-in-time system health snapshot for the requested metric categories.
+        
+        Includes CPU, memory, disk, network, and load data when those categories are requested. Counter-style metrics (e.g., CPU counters, disk and network bytes) are converted to per-second rates using the specified sampling interval.
+        
+        Returns:
+            SystemSnapshot: Snapshot populated with an ISO-8601 UTC timestamp, the target hostname, and fields for each requested metric category.
         """
         from pcp_mcp.errors import handle_pcp_error
 
@@ -189,15 +181,18 @@ def register_system_tools(mcp: FastMCP) -> None:
             ),
         ] = 1.0,
     ) -> ProcessTopResult:
-        """Get top processes by resource consumption.
-
-        For CPU and I/O, takes two samples to calculate rates. Memory is instantaneous.
-        Returns the top N processes sorted by the requested resource.
-
-        Examples:
-            get_process_top() - Top 10 by CPU (default)
-            get_process_top(sort_by="memory", limit=20) - Top 20 memory consumers
-            get_process_top(sort_by="io", sample_interval=2.0) - Top I/O with longer sample
+        """
+        Retrieve the top processes sorted by the requested resource.
+        
+        For CPU and I/O, two samples are taken to calculate rates; memory values are instantaneous.
+        
+        Parameters:
+            sort_by (Literal["cpu","memory","io"]): Resource to sort by.
+            limit (int): Maximum number of processes to return (1–50).
+            sample_interval (float): Seconds to sample for CPU/IO rate calculations (0.5–5.0).
+        
+        Returns:
+            ProcessTopResult: Snapshot containing timestamp, hostname, sort_by, sample_interval, list of top processes, total_memory_bytes, ncpu, and an assessment of the process list.
         """
         client = get_client(ctx)
 

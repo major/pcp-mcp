@@ -16,7 +16,17 @@ if TYPE_CHECKING:
 
 
 def register_metrics_tools(mcp: FastMCP) -> None:
-    """Register core metric tools with the MCP server."""
+    """
+    Register three PCP metric tools on the provided MCP server.
+    
+    Adds the following tool endpoints to `mcp`:
+    - query_metrics: fetch current values for one or more PCP metrics (one result per instance).
+    - search_metrics: search for metric names by prefix and return names with brief descriptions.
+    - describe_metric: return detailed metadata for a single metric (type, semantics, units, help text, indom).
+    
+    Parameters:
+        mcp (FastMCP): MCP server instance to register the tools on.
+    """
 
     @mcp.tool()
     async def query_metrics(
@@ -79,16 +89,16 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             Field(description="Metric name prefix to search for (e.g., 'kernel.all', 'mem')"),
         ],
     ) -> list[MetricSearchResult]:
-        """Find PCP metrics matching a name pattern.
-
-        Use this to discover available metrics before querying them.
-        Returns metric names and brief descriptions.
-
-        Examples:
-            search_metrics("kernel.all") - Find kernel-wide metrics
-            search_metrics("mem.util") - Find memory utilization metrics
-            search_metrics("disk.dev") - Find per-disk metrics
-            search_metrics("network.interface") - Find per-interface metrics
+        """
+        Find PCP metrics whose names start with the given pattern.
+        
+        Searches available metrics and returns each match with its name and extracted help text.
+        
+        Parameters:
+            pattern (str): Metric name prefix to search for (e.g., "kernel.all", "mem", "disk.dev").
+        
+        Returns:
+            results (list[MetricSearchResult]): List of matching metrics; each item contains `name` and `help_text`.
         """
         from pcp_mcp.errors import handle_pcp_error
 

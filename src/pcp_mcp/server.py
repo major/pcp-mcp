@@ -40,8 +40,9 @@ async def lifespan(mcp: FastMCP) -> AsyncIterator[dict[str, Any]]:
 
 
 def create_server() -> FastMCP:
-    """Create and configure the MCP server.
-
+    """
+    Create and configure the PCP MCP server with predefined instructions and register its tools, resources, and prompts.
+    
     Returns:
         Configured FastMCP server instance.
     """
