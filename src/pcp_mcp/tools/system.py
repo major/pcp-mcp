@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 from fastmcp import Context
 from pydantic import Field
 
-from pcp_mcp.context import get_client
+from pcp_mcp.context import get_client_for_host
 from pcp_mcp.models import ProcessTopResult, SystemSnapshot
 from pcp_mcp.utils.builders import (
     assess_processes,
@@ -111,6 +111,10 @@ def register_system_tools(mcp: FastMCP) -> None:
                 description="Seconds between samples for rate calculation",
             ),
         ] = 1.0,
+        host: Annotated[
+            str | None,
+            Field(description="Target pmcd host to query (default: server's configured target)"),
+        ] = None,
     ) -> SystemSnapshot:
         """Get a point-in-time system health overview.
 
@@ -127,10 +131,9 @@ def register_system_tools(mcp: FastMCP) -> None:
             get_system_snapshot(categories=["cpu", "memory"]) - CPU and memory only
             get_system_snapshot(categories=["cpu", "load"]) - CPU and load averages
             get_system_snapshot(categories=["disk", "network"]) - I/O analysis
+            get_system_snapshot(host="web1.example.com") - Query remote host
         """
         from pcp_mcp.errors import handle_pcp_error
-
-        client = get_client(ctx)
 
         if categories is None:
             categories = ["cpu", "memory", "disk", "network", "load"]
@@ -140,32 +143,33 @@ def register_system_tools(mcp: FastMCP) -> None:
             if cat in SNAPSHOT_METRICS:
                 all_metrics.extend(SNAPSHOT_METRICS[cat])
 
-        try:
-            data = await client.fetch_with_rates(
-                all_metrics,
-                COUNTER_METRICS,
-                sample_interval,
+        async with get_client_for_host(ctx, host) as client:
+            try:
+                data = await client.fetch_with_rates(
+                    all_metrics,
+                    COUNTER_METRICS,
+                    sample_interval,
+                )
+            except Exception as e:
+                raise handle_pcp_error(e, "fetching system snapshot") from e
+
+            snapshot = SystemSnapshot(
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                hostname=client.target_host,
             )
-        except Exception as e:
-            raise handle_pcp_error(e, "fetching system snapshot") from e
 
-        snapshot = SystemSnapshot(
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            hostname=client.target_host,
-        )
+            if "cpu" in categories:
+                snapshot.cpu = build_cpu_metrics(data)
+            if "memory" in categories:
+                snapshot.memory = build_memory_metrics(data)
+            if "load" in categories:
+                snapshot.load = build_load_metrics(data)
+            if "disk" in categories:
+                snapshot.disk = build_disk_metrics(data)
+            if "network" in categories:
+                snapshot.network = build_network_metrics(data)
 
-        if "cpu" in categories:
-            snapshot.cpu = build_cpu_metrics(data)
-        if "memory" in categories:
-            snapshot.memory = build_memory_metrics(data)
-        if "load" in categories:
-            snapshot.load = build_load_metrics(data)
-        if "disk" in categories:
-            snapshot.disk = build_disk_metrics(data)
-        if "network" in categories:
-            snapshot.network = build_network_metrics(data)
-
-        return snapshot
+            return snapshot
 
     @mcp.tool()
     async def get_process_top(
@@ -187,6 +191,10 @@ def register_system_tools(mcp: FastMCP) -> None:
                 description="Seconds to sample for CPU/IO rates",
             ),
         ] = 1.0,
+        host: Annotated[
+            str | None,
+            Field(description="Target pmcd host to query (default: server's configured target)"),
+        ] = None,
     ) -> ProcessTopResult:
         """Get top processes by resource consumption.
 
@@ -197,9 +205,8 @@ def register_system_tools(mcp: FastMCP) -> None:
             get_process_top() - Top 10 by CPU (default)
             get_process_top(sort_by="memory", limit=20) - Top 20 memory consumers
             get_process_top(sort_by="io", sample_interval=2.0) - Top I/O with longer sample
+            get_process_top(host="db1.example.com") - Query remote host
         """
-        client = get_client(ctx)
-
         all_metrics = (
             PROCESS_METRICS["info"] + PROCESS_METRICS["memory"] + PROCESS_METRICS.get(sort_by, [])
         )
@@ -220,28 +227,31 @@ def register_system_tools(mcp: FastMCP) -> None:
 
         from pcp_mcp.errors import handle_pcp_error
 
-        try:
-            proc_data = await client.fetch_with_rates(all_metrics, counter_metrics, sample_interval)
-            sys_data = await client.fetch(system_metrics)
-        except Exception as e:
-            raise handle_pcp_error(e, "fetching process data") from e
+        async with get_client_for_host(ctx, host) as client:
+            try:
+                proc_data = await client.fetch_with_rates(
+                    all_metrics, counter_metrics, sample_interval
+                )
+                sys_data = await client.fetch(system_metrics)
+            except Exception as e:
+                raise handle_pcp_error(e, "fetching process data") from e
 
-        ncpu = get_scalar_value(sys_data, "hinv.ncpu", 1)
-        total_mem = get_scalar_value(sys_data, "mem.physmem", 1) * 1024
+            ncpu = get_scalar_value(sys_data, "hinv.ncpu", 1)
+            total_mem = get_scalar_value(sys_data, "mem.physmem", 1) * 1024
 
-        processes = build_process_list(proc_data, sort_by, total_mem, ncpu)
-        processes.sort(key=lambda p: get_sort_key(p, sort_by), reverse=True)
-        processes = processes[:limit]
+            processes = build_process_list(proc_data, sort_by, total_mem, ncpu)
+            processes.sort(key=lambda p: get_sort_key(p, sort_by), reverse=True)
+            processes = processes[:limit]
 
-        assessment = assess_processes(processes, sort_by, ncpu)
+            assessment = assess_processes(processes, sort_by, ncpu)
 
-        return ProcessTopResult(
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            hostname=client.target_host,
-            sort_by=sort_by,
-            sample_interval=sample_interval,
-            processes=processes,
-            total_memory_bytes=int(total_mem),
-            ncpu=ncpu,
-            assessment=assessment,
-        )
+            return ProcessTopResult(
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                hostname=client.target_host,
+                sort_by=sort_by,
+                sample_interval=sample_interval,
+                processes=processes,
+                total_memory_bytes=int(total_mem),
+                ncpu=ncpu,
+                assessment=assessment,
+            )
