@@ -147,22 +147,32 @@ class TestDescribeMetric:
         with pytest.raises(ToolError, match="Metric not found"):
             await tools["describe_metric"](mock_context, name="nonexistent.metric")
 
-    async def test_describe_metric_formats_units_fallback(
+    @pytest.mark.parametrize(
+        ("metric_info", "expected_units"),
+        [
+            ({"units": "millisec"}, "millisec"),
+            ({"units": "", "units-space": "Kbyte", "units-time": "sec"}, "Kbyte / sec"),
+            ({"units": "", "units-count": "count"}, "count"),
+            ({"units": ""}, "none"),
+            ({}, "none"),
+        ],
+    )
+    async def test_describe_metric_formats_units(
         self,
         mock_context: MagicMock,
         capture_tools,
+        metric_info: dict,
+        expected_units: str,
     ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {
-            "name": "disk.all.read_bytes",
+            "name": "test.metric",
             "type": "U64",
             "sem": "counter",
-            "units": "",
-            "units-space": "Kbyte",
-            "units-time": "sec",
+            **metric_info,
         }
 
         tools = capture_tools(register_metrics_tools)
 
-        result = await tools["describe_metric"](mock_context, name="disk.all.read_bytes")
+        result = await tools["describe_metric"](mock_context, name="test.metric")
 
-        assert result.units == "Kbyte / sec"
+        assert result.units == expected_units

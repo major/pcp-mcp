@@ -299,3 +299,30 @@ def capture_resources() -> Callable[[RegisterFn], ResourceDict]:
         return resources
 
     return factory
+
+
+@pytest.fixture
+def namespace_search_response() -> Callable[..., list[dict]]:
+    def _make(namespaces: list[str] | None = None) -> list[dict]:
+        if namespaces is None:
+            namespaces = ["kernel.all.load", "kernel.all.cpu.user", "mem.physmem", "disk.all.read"]
+        return [{"name": ns} for ns in namespaces]
+
+    return _make
+
+
+@pytest.fixture
+def pmda_status_response() -> Callable[..., dict]:
+    def _make(pmdas: list[tuple[str | int, int]] | None = None) -> dict:
+        if pmdas is None:
+            pmdas = [("linux", 0), ("pmcd", 0)]
+        return {
+            "values": [
+                {
+                    "name": "pmcd.agent.status",
+                    "instances": [{"instance": name, "value": status} for name, status in pmdas],
+                }
+            ]
+        }
+
+    return _make

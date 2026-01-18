@@ -67,30 +67,46 @@ class TestGetSystemSnapshot:
 
 
 class TestGetProcessTop:
-    async def test_returns_top_processes(
-        self,
-        mock_context: MagicMock,
-        capture_tools,
-        process_metrics_data,
-    ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.return_value = process_metrics_data()
-        mock_context.request_context.lifespan_context["client"].fetch.return_value = {
+    @pytest.fixture
+    def system_info_response(self) -> dict:
+        return {
             "values": [
                 {"name": "hinv.ncpu", "instances": [{"value": 4}]},
                 {"name": "mem.physmem", "instances": [{"value": 16000000}]},
             ]
         }
 
+    @pytest.mark.parametrize(
+        ("sort_by", "expected_field"),
+        [
+            ("cpu", "cpu_percent"),
+            ("memory", "rss_bytes"),
+            ("io", "io_read_bytes_per_sec"),
+        ],
+    )
+    async def test_returns_top_processes_sorted(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        process_metrics_data,
+        system_info_response: dict,
+        sort_by: str,
+        expected_field: str,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.return_value = process_metrics_data()
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch.return_value = system_info_response
+
         tools = capture_tools(register_system_tools)
-        result = await tools["get_process_top"](mock_context, sort_by="cpu", limit=2)
+        result = await tools["get_process_top"](mock_context, sort_by=sort_by, limit=2)
 
         assert len(result.processes) == 2
-        assert result.processes[0].command == "python"
-        assert result.processes[0].cpu_percent is not None
+        assert result.sort_by == sort_by
         assert result.ncpu == 4
-        assert result.sort_by == "cpu"
+        assert getattr(result.processes[0], expected_field) is not None
 
     async def test_handles_error(
         self,

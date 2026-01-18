@@ -494,3 +494,87 @@ class TestPCPClientFetchWithRates:
             instances = result["kernel.percpu.cpu.user"]["instances"]
             assert instances[0] == pytest.approx(100.0)
             assert instances[1] == pytest.approx(300.0)
+
+    @respx.mock
+    async def test_fetch_with_rates_handles_float_timestamps(self) -> None:
+        respx.get("/pmapi/context").mock(return_value=Response(200, json={"context": 1}))
+
+        respx.get("/pmapi/fetch").mock(
+            side_effect=[
+                Response(
+                    200,
+                    json={
+                        "timestamp": 1000.0,
+                        "values": [
+                            {
+                                "name": "disk.all.read_bytes",
+                                "instances": [{"instance": -1, "value": 1000000}],
+                            }
+                        ],
+                    },
+                ),
+                Response(
+                    200,
+                    json={
+                        "timestamp": 1001.5,
+                        "values": [
+                            {
+                                "name": "disk.all.read_bytes",
+                                "instances": [{"instance": -1, "value": 1150000}],
+                            }
+                        ],
+                    },
+                ),
+            ]
+        )
+
+        async with PCPClient(base_url="http://localhost:44322") as client:
+            result = await client.fetch_with_rates(
+                metric_names=["disk.all.read_bytes"],
+                counter_metrics={"disk.all.read_bytes"},
+                sample_interval=0.01,
+            )
+
+            assert result["disk.all.read_bytes"]["instances"][-1] == pytest.approx(100000.0)
+
+    @respx.mock
+    async def test_fetch_with_rates_uses_sample_interval_when_timestamps_invalid(self) -> None:
+        respx.get("/pmapi/context").mock(return_value=Response(200, json={"context": 1}))
+
+        respx.get("/pmapi/fetch").mock(
+            side_effect=[
+                Response(
+                    200,
+                    json={
+                        "timestamp": 0.0,
+                        "values": [
+                            {
+                                "name": "disk.all.read_bytes",
+                                "instances": [{"instance": -1, "value": 1000000}],
+                            }
+                        ],
+                    },
+                ),
+                Response(
+                    200,
+                    json={
+                        "timestamp": 0.0,
+                        "values": [
+                            {
+                                "name": "disk.all.read_bytes",
+                                "instances": [{"instance": -1, "value": 1100000}],
+                            }
+                        ],
+                    },
+                ),
+            ]
+        )
+
+        async with PCPClient(base_url="http://localhost:44322") as client:
+            result = await client.fetch_with_rates(
+                metric_names=["disk.all.read_bytes"],
+                counter_metrics={"disk.all.read_bytes"},
+                sample_interval=1.0,
+            )
+
+            assert result["disk.all.read_bytes"]["instances"][-1] == pytest.approx(100000.0)
