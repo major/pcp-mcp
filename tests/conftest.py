@@ -242,12 +242,23 @@ def mock_client() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_client_manager(mock_client: AsyncMock) -> AsyncMock:
+    """Create a mock ClientManager."""
+    from pcp_mcp.context import ClientManager
+
+    manager = AsyncMock(spec=ClientManager)
+    # Make get_client return the mock client
+    manager.get_client = AsyncMock(return_value=mock_client)
+    return manager
+
+
+@pytest.fixture
 def mock_lifespan_context(
-    mock_client: AsyncMock,
+    mock_client_manager: AsyncMock,
     mock_settings: PCPMCPSettings,
 ) -> dict[str, Any]:
     """Create mock lifespan context."""
-    return {"client": mock_client, "settings": mock_settings}
+    return {"client_manager": mock_client_manager, "settings": mock_settings}
 
 
 @pytest.fixture

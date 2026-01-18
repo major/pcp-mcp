@@ -30,7 +30,7 @@ def register_health_resources(mcp: FastMCP) -> None:
         for quick health checks. For detailed metrics, use the
         get_system_snapshot tool instead.
         """
-        client = get_client(ctx)
+        client = await get_client(ctx)
 
         metrics = SNAPSHOT_METRICS["cpu"] + SNAPSHOT_METRICS["memory"] + SNAPSHOT_METRICS["load"]
 

@@ -14,9 +14,10 @@ class TestQueryMetrics:
     async def test_query_metrics_returns_values(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
-        mock_context.request_context.lifespan_context["client"].fetch.return_value = {
+        mock_client.fetch.return_value = {
             "values": [
                 {
                     "name": "kernel.all.load",
@@ -41,9 +42,10 @@ class TestQueryMetrics:
     async def test_query_metrics_handles_no_instance(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
-        mock_context.request_context.lifespan_context["client"].fetch.return_value = {
+        mock_client.fetch.return_value = {
             "values": [
                 {
                     "name": "hinv.ncpu",
@@ -63,13 +65,12 @@ class TestQueryMetrics:
     async def test_query_metrics_raises_on_error(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
         import httpx
 
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch.side_effect = httpx.ConnectError("Connection refused")
+        mock_client.fetch.side_effect = httpx.ConnectError("Connection refused")
 
         tools = capture_tools(register_metrics_tools)
 
@@ -81,9 +82,10 @@ class TestSearchMetrics:
     async def test_search_metrics_returns_results(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
-        mock_context.request_context.lifespan_context["client"].search.return_value = [
+        mock_client.search.return_value = [
             {"name": "kernel.all.cpu.user", "text-oneline": "User CPU time"},
             {"name": "kernel.all.cpu.sys", "text-help": "System CPU time"},
         ]
@@ -100,9 +102,10 @@ class TestSearchMetrics:
     async def test_search_metrics_empty_results(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
-        mock_context.request_context.lifespan_context["client"].search.return_value = []
+        mock_client.search.return_value = []
 
         tools = capture_tools(register_metrics_tools)
 
@@ -115,9 +118,10 @@ class TestDescribeMetric:
     async def test_describe_metric_returns_info(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
-        mock_context.request_context.lifespan_context["client"].describe.return_value = {
+        mock_client.describe.return_value = {
             "name": "kernel.all.cpu.user",
             "type": "U64",
             "sem": "counter",
@@ -138,9 +142,10 @@ class TestDescribeMetric:
     async def test_describe_metric_not_found(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
-        mock_context.request_context.lifespan_context["client"].describe.return_value = {}
+        mock_client.describe.return_value = {}
 
         tools = capture_tools(register_metrics_tools)
 
@@ -160,11 +165,12 @@ class TestDescribeMetric:
     async def test_describe_metric_formats_units(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
         metric_info: dict,
         expected_units: str,
     ) -> None:
-        mock_context.request_context.lifespan_context["client"].describe.return_value = {
+        mock_client.describe.return_value = {
             "name": "test.metric",
             "type": "U64",
             "sem": "counter",

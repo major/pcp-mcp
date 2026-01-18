@@ -15,12 +15,11 @@ class TestGetSystemSnapshot:
     async def test_returns_all_categories(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
         full_system_snapshot_data,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.return_value = full_system_snapshot_data()
+        mock_client.fetch_with_rates.return_value = full_system_snapshot_data()
 
         tools = capture_tools(register_system_tools)
         result = await tools["get_system_snapshot"](mock_context)
@@ -35,12 +34,11 @@ class TestGetSystemSnapshot:
     async def test_returns_subset_categories(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
         cpu_metrics_data,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.return_value = cpu_metrics_data()
+        mock_client.fetch_with_rates.return_value = cpu_metrics_data()
 
         tools = capture_tools(register_system_tools)
         result = await tools["get_system_snapshot"](mock_context, categories=["cpu"])
@@ -54,11 +52,10 @@ class TestGetSystemSnapshot:
     async def test_handles_error(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.side_effect = httpx.ConnectError("Connection refused")
+        mock_client.fetch_with_rates.side_effect = httpx.ConnectError("Connection refused")
 
         tools = capture_tools(register_system_tools)
 
@@ -87,18 +84,15 @@ class TestGetProcessTop:
     async def test_returns_top_processes_sorted(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
         process_metrics_data,
         system_info_response: dict,
         sort_by: str,
         expected_field: str,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.return_value = process_metrics_data()
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch.return_value = system_info_response
+        mock_client.fetch_with_rates.return_value = process_metrics_data()
+        mock_client.fetch.return_value = system_info_response
 
         tools = capture_tools(register_system_tools)
         result = await tools["get_process_top"](mock_context, sort_by=sort_by, limit=2)
@@ -111,11 +105,10 @@ class TestGetProcessTop:
     async def test_handles_error(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_tools,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.side_effect = httpx.ConnectError("Connection refused")
+        mock_client.fetch_with_rates.side_effect = httpx.ConnectError("Connection refused")
 
         tools = capture_tools(register_system_tools)
 

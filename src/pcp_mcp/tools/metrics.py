@@ -25,6 +25,13 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             list[str],
             Field(description="List of PCP metric names to fetch (e.g., ['kernel.all.load'])"),
         ],
+        host: Annotated[
+            str | None,
+            Field(
+                default=None,
+                description="Target host to query (defaults to configured target_host)",
+            ),
+        ] = None,
     ) -> list[MetricValue]:
         """Fetch current values for specific PCP metrics.
 
@@ -35,13 +42,14 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             query_metrics(["kernel.all.load"]) - Get load averages
             query_metrics(["mem.util.available", "mem.physmem"]) - Get memory stats
             query_metrics(["hinv.ncpu"]) - Get CPU count
+            query_metrics(["kernel.all.load"], host="webserver1.example.com") - Query remote host
 
         Warning: CPU, disk, and network metrics are counters (cumulative since boot).
         Use get_system_snapshot() instead for rates.
         """
         from pcp_mcp.errors import handle_pcp_error
 
-        client = get_client(ctx)
+        client = await get_client(ctx, host)
 
         try:
             response = await client.fetch(names)
@@ -78,6 +86,13 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             str,
             Field(description="Metric name prefix to search for (e.g., 'kernel.all', 'mem')"),
         ],
+        host: Annotated[
+            str | None,
+            Field(
+                default=None,
+                description="Target host to query (defaults to configured target_host)",
+            ),
+        ] = None,
     ) -> list[MetricSearchResult]:
         """Find PCP metrics matching a name pattern.
 
@@ -89,10 +104,11 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             search_metrics("mem.util") - Find memory utilization metrics
             search_metrics("disk.dev") - Find per-disk metrics
             search_metrics("network.interface") - Find per-interface metrics
+            search_metrics("kernel.all", host="webserver1.example.com") - Search on remote host
         """
         from pcp_mcp.errors import handle_pcp_error
 
-        client = get_client(ctx)
+        client = await get_client(ctx, host)
 
         try:
             metrics = await client.search(pattern)
@@ -114,6 +130,13 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             str,
             Field(description="Full PCP metric name (e.g., 'kernel.all.cpu.user')"),
         ],
+        host: Annotated[
+            str | None,
+            Field(
+                default=None,
+                description="Target host to query (defaults to configured target_host)",
+            ),
+        ] = None,
     ) -> MetricInfo:
         """Get detailed metadata about a PCP metric.
 
@@ -124,12 +147,13 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             describe_metric("kernel.all.load") - Learn about load average semantics
             describe_metric("mem.util.available") - Understand available memory
             describe_metric("disk.all.read_bytes") - Check if metric is counter vs instant
+            describe_metric("kernel.all.load", host="webserver1.example.com") - Remote host
         """
         from fastmcp.exceptions import ToolError
 
         from pcp_mcp.errors import handle_pcp_error
 
-        client = get_client(ctx)
+        client = await get_client(ctx, host)
 
         try:
             info = await client.describe(name)

@@ -111,6 +111,13 @@ def register_system_tools(mcp: FastMCP) -> None:
                 description="Seconds between samples for rate calculation",
             ),
         ] = 1.0,
+        host: Annotated[
+            str | None,
+            Field(
+                default=None,
+                description="Target host to query (defaults to configured target_host)",
+            ),
+        ] = None,
     ) -> SystemSnapshot:
         """Get a point-in-time system health overview.
 
@@ -127,10 +134,11 @@ def register_system_tools(mcp: FastMCP) -> None:
             get_system_snapshot(categories=["cpu", "memory"]) - CPU and memory only
             get_system_snapshot(categories=["cpu", "load"]) - CPU and load averages
             get_system_snapshot(categories=["disk", "network"]) - I/O analysis
+            get_system_snapshot(host="webserver1.example.com") - Query remote host
         """
         from pcp_mcp.errors import handle_pcp_error
 
-        client = get_client(ctx)
+        client = await get_client(ctx, host)
 
         if categories is None:
             categories = ["cpu", "memory", "disk", "network", "load"]
@@ -187,6 +195,13 @@ def register_system_tools(mcp: FastMCP) -> None:
                 description="Seconds to sample for CPU/IO rates",
             ),
         ] = 1.0,
+        host: Annotated[
+            str | None,
+            Field(
+                default=None,
+                description="Target host to query (defaults to configured target_host)",
+            ),
+        ] = None,
     ) -> ProcessTopResult:
         """Get top processes by resource consumption.
 
@@ -197,8 +212,9 @@ def register_system_tools(mcp: FastMCP) -> None:
             get_process_top() - Top 10 by CPU (default)
             get_process_top(sort_by="memory", limit=20) - Top 20 memory consumers
             get_process_top(sort_by="io", sample_interval=2.0) - Top I/O with longer sample
+            get_process_top(host="webserver1.example.com") - Query remote host
         """
-        client = get_client(ctx)
+        client = await get_client(ctx, host)
 
         all_metrics = (
             PROCESS_METRICS["info"] + PROCESS_METRICS["memory"] + PROCESS_METRICS.get(sort_by, [])

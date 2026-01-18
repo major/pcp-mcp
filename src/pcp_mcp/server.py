@@ -8,7 +8,6 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from pcp_mcp.client import PCPClient
 from pcp_mcp.config import PCPMCPSettings
 
 
@@ -16,27 +15,35 @@ from pcp_mcp.config import PCPMCPSettings
 async def lifespan(mcp: FastMCP) -> AsyncIterator[dict[str, Any]]:
     """Manage PCPClient lifecycle.
 
-    Creates a PCPClient for the duration of the server's lifetime,
+    Creates a ClientManager for the duration of the server's lifetime,
     making it available to all tools and resources via the context.
 
     Args:
         mcp: The FastMCP server instance.
 
     Yields:
-        Context dict with client and settings.
+        Context dict with client_manager and settings.
     """
+    from pcp_mcp.context import ClientManager
+
     settings = PCPMCPSettings()
 
-    async with PCPClient(
+    manager = ClientManager(
         base_url=settings.base_url,
-        target_host=settings.target_host,
+        default_target_host=settings.target_host,
         auth=settings.auth,
         timeout=settings.timeout,
-    ) as client:
+    )
+
+    try:
+        # Pre-create the default client
+        await manager.get_client()
         yield {
-            "client": client,
+            "client_manager": manager,
             "settings": settings,
         }
+    finally:
+        await manager.close_all()
 
 
 def create_server() -> FastMCP:
