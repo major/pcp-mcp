@@ -137,3 +137,25 @@ Once configured, ask your LLM:
 ```
 
 If everything is working, you'll get CPU, memory, disk, and network metrics from PCP.
+
+## Troubleshooting
+
+### Process metrics return empty results
+
+By default, pmproxy excludes process metrics (`proc.*`) from the REST API for performance reasons. This means `get_process_top` may return no processes.
+
+Check `/etc/pcp/pmproxy/pmproxy.conf` for these lines:
+
+```ini
+[discover]
+exclude.metrics = proc.*,acct.*
+exclude.indoms = 3.9,3.40,79.7
+```
+
+To enable process metrics, remove `proc.*` from `exclude.metrics` and `3.9` from `exclude.indoms`, then restart pmproxy:
+
+```bash
+sudo systemctl restart pmproxy
+```
+
+Note: Enabling process metrics increases load on pmproxy as it tracks instance changes for potentially hundreds of processes.
