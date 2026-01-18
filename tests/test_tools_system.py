@@ -190,7 +190,6 @@ class TestBuildMemoryMetrics:
     def test_normal_memory(self) -> None:
         data = {
             "mem.physmem": {"instances": {-1: 16000000}},
-            "mem.util.used": {"instances": {-1: 8000000}},
             "mem.util.free": {"instances": {-1: 4000000}},
             "mem.util.available": {"instances": {-1: 6000000}},
             "mem.util.cached": {"instances": {-1: 2000000}},
@@ -200,7 +199,7 @@ class TestBuildMemoryMetrics:
         }
         result = build_memory_metrics(data)
 
-        assert result.used_percent == 50.0
+        assert result.used_percent == 62.5
         assert "normal" in result.assessment.lower()
 
 

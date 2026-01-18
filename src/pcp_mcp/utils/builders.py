@@ -57,15 +57,15 @@ def build_cpu_metrics(data: dict) -> CPUMetrics:
 def build_memory_metrics(data: dict) -> MemoryMetrics:
     """Build memory metrics from fetched data."""
     total = int(get_first_value(data, "mem.physmem")) * 1024
-    used = int(get_first_value(data, "mem.util.used")) * 1024
-    free = int(get_first_value(data, "mem.util.free")) * 1024
     available = int(get_first_value(data, "mem.util.available")) * 1024
+    free = int(get_first_value(data, "mem.util.free")) * 1024
     cached = int(get_first_value(data, "mem.util.cached")) * 1024
     buffers = int(get_first_value(data, "mem.util.bufmem")) * 1024
     swap_total = int(get_first_value(data, "mem.util.swapTotal")) * 1024
     swap_free = int(get_first_value(data, "mem.util.swapFree")) * 1024
     swap_used = swap_total - swap_free
 
+    used = total - available
     used_pct = (used / total * 100) if total > 0 else 0.0
 
     if swap_used > swap_total * 0.5:
