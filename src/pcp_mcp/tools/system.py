@@ -1,7 +1,5 @@
 """System health tools for clumped metric queries."""
 
-from __future__ import annotations
-
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Literal
 
