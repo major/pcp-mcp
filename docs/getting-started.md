@@ -142,9 +142,15 @@ If everything is working, you'll get CPU, memory, disk, and network metrics from
 
 ### Process metrics return empty results
 
-By default, pmproxy excludes process metrics (`proc.*`) from the REST API for performance reasons. This means `get_process_top` may return no processes.
+The `get_process_top` tool may return empty results due to limitations in how pmproxy's REST API handles dynamic instance domains like processes.
 
-Check `/etc/pcp/pmproxy/pmproxy.conf` for these lines:
+#### Known limitation
+
+The pmproxy REST API does not enumerate instances for volatile instance domains (like `proc.*` metrics where processes come and go). While `pmprobe -I proc.psinfo.pid` works directly against pmcd, the equivalent REST API call returns empty instances. This is a limitation of the pmproxy REST API, not pcp-mcp.
+
+#### Configuration (may help in some setups)
+
+By default, pmproxy also excludes process metrics from discovery. Check `/etc/pcp/pmproxy/pmproxy.conf`:
 
 ```ini
 [discover]
@@ -152,10 +158,25 @@ exclude.metrics = proc.*,acct.*
 exclude.indoms = 3.9,3.40,79.7
 ```
 
-To enable process metrics, remove `proc.*` from `exclude.metrics` and `3.9` from `exclude.indoms`, then restart pmproxy:
+To enable process metrics in discovery, change **both** lines:
+
+1. Remove `proc.*` from `exclude.metrics`
+2. Remove `3.9` from `exclude.indoms` (this is the process instance domain)
+
+After editing:
+
+```ini
+[discover]
+exclude.metrics = acct.*
+exclude.indoms = 3.40,79.7
+```
+
+Then restart pmproxy:
 
 ```bash
 sudo systemctl restart pmproxy
 ```
 
-Note: Enabling process metrics increases load on pmproxy as it tracks instance changes for potentially hundreds of processes.
+#### Alternative
+
+For process monitoring, consider using PCP tools directly (`pmrep`, `pcp-htop`) which communicate with pmcd via the native protocol rather than the REST API.
