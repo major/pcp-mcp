@@ -49,6 +49,9 @@ class ClientManager:
 
         Returns:
             PCPClient instance for the specified host.
+
+        Raises:
+            Exception: If client creation or connection fails.
         """
         # Import locally to avoid circular dependency
         from pcp_mcp.client import PCPClient
@@ -69,7 +72,13 @@ class ClientManager:
             auth=self._auth,
             timeout=self._timeout,
         )
-        await client.__aenter__()
+        
+        try:
+            await client.__aenter__()
+        except Exception:
+            # Ensure we clean up the client if connection fails
+            await client.__aexit__(None, None, None)
+            raise
 
         # Cache the client
         if host == self._default_target_host:
@@ -80,14 +89,30 @@ class ClientManager:
         return client
 
     async def close_all(self) -> None:
-        """Close all managed client connections."""
+        """Close all managed client connections.
+        
+        Attempts to close all clients, collecting any exceptions that occur.
+        """
+        exceptions = []
+        
         if self._default_client:
-            await self._default_client.__aexit__(None, None, None)
-            self._default_client = None
+            try:
+                await self._default_client.__aexit__(None, None, None)
+            except Exception as e:
+                exceptions.append(e)
+            finally:
+                self._default_client = None
 
         for client in self._clients.values():
-            await client.__aexit__(None, None, None)
+            try:
+                await client.__aexit__(None, None, None)
+            except Exception as e:
+                exceptions.append(e)
         self._clients.clear()
+        
+        # If any exceptions occurred, raise the first one
+        if exceptions:
+            raise exceptions[0]
 
 
 def _validate_context(ctx: Context) -> None:
