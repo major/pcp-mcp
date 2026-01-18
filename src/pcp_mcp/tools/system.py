@@ -1,5 +1,7 @@
 """System health tools for clumped metric queries."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Literal
 
@@ -190,6 +192,11 @@ def register_system_tools(mcp: FastMCP) -> None:
 
         For CPU and I/O, takes two samples to calculate rates. Memory is instantaneous.
         Returns the top N processes sorted by the requested resource.
+
+        Examples:
+            get_process_top() - Top 10 by CPU (default)
+            get_process_top(sort_by="memory", limit=20) - Top 20 memory consumers
+            get_process_top(sort_by="io", sample_interval=2.0) - Top I/O with longer sample
         """
         client = get_client(ctx)
 
