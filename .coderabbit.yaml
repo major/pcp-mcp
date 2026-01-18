@@ -4,7 +4,7 @@ tone_instructions: |
   Explain failure modes and suggest prevention.
 
 reviews:
-  profile: assertive
+  profile: chill
   collapse_walkthrough: false
   poem: false
   request_changes_workflow: false
