@@ -54,27 +54,70 @@ def create_server() -> FastMCP:
 Monitoring target: {settings.target_host}
 pmproxy endpoint: {settings.base_url}
 
-Query live system metrics from Performance Co-Pilot. Use tools for specific
-metric queries or browse resources for read-only data access.
+🎯 QUICK START GUIDE FOR LLMs
+
+Common troubleshooting workflows:
+- "System is slow" → get_system_snapshot(categories=["cpu", "load", "memory"])
+- "High CPU usage" → get_process_top(sort_by="cpu") + query_metrics(["kernel.all.cpu.*"])
+- "Memory pressure" → get_system_snapshot(categories=["memory"]) + search_metrics("mem.util")
+- "Disk I/O issues" → get_system_snapshot(categories=["disk"]) + search_metrics("disk.dev")
+- "Network saturation" → get_system_snapshot(categories=["network"]) + search_metrics("network.interface")
+
+📊 METRIC NAMESPACE GUIDE
+
+Key prefixes and what they measure:
+- kernel.all.*    → System-wide aggregates (load, CPU totals, interrupts)
+- mem.*           → Memory utilization (physmem, swap, buffers, cache)
+- disk.*          → Disk I/O (disk.all.* for totals, disk.dev.* per-device)
+- network.*       → Network I/O (network.interface.* per-interface)
+- proc.*          → Per-process metrics (use get_process_top instead of raw queries)
+- hinv.*          → Hardware inventory (ncpu, physmem, machine type)
+- pmcd.*          → PCP daemon health (agent status, timeouts)
+- cgroup.*        → Container/cgroup metrics (requires cgroups PMDA)
+
+⚠️ COUNTER METRICS WARNING
+
+These metrics are CUMULATIVE (values since boot):
+- kernel.all.cpu.*
+- disk.all.read_bytes, disk.all.write_bytes
+- network.interface.in.bytes, network.interface.out.bytes
+- proc.psinfo.utime, proc.psinfo.stime
+- proc.io.read_bytes, proc.io.write_bytes
+
+For meaningful rates, use:
+- get_system_snapshot (handles rate calculation automatically)
+- get_process_top (handles rate calculation automatically)
+
+DO NOT query these directly with query_metrics expecting per-second rates!
+
+🔍 DISCOVERY WORKFLOW
+
+1. Start broad: get_system_snapshot() or get_process_top()
+2. Drill down: search_metrics("prefix") to find specific metrics
+3. Investigate: describe_metric("full.metric.name") for units/semantics
+4. Query: query_metrics(["name1", "name2"]) for raw values (non-counters only)
 
 Tools:
-- query_metrics: Fetch specific metrics by name
-- search_metrics: Find metrics matching a pattern
-- describe_metric: Get metadata for a metric
-- get_system_snapshot: System overview (CPU, memory, disk, network)
+- query_metrics: Fetch specific metrics by name (use for instant/gauge metrics)
+- search_metrics: Find metrics matching a pattern (e.g., 'kernel.all', 'mem')
+- describe_metric: Get metadata for a metric (type, units, help text)
+- get_system_snapshot: System overview (CPU, memory, disk, network) - USE THIS FIRST
 - get_process_top: Top processes by resource consumption
 
 Resources:
 - pcp://health - Quick system health summary
 - pcp://metrics/{{pattern}} - Browse metrics matching pattern
+- pcp://metrics/common - Catalog of commonly used metrics
 """,
         lifespan=lifespan,
     )
 
+    from pcp_mcp.prompts import register_prompts
     from pcp_mcp.resources import register_resources
     from pcp_mcp.tools import register_tools
 
     register_tools(mcp)
     register_resources(mcp)
+    register_prompts(mcp)
 
     return mcp
