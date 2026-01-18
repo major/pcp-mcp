@@ -72,6 +72,45 @@ class PCPClient:
         """The pmapi context ID, or None if not connected."""
         return self._context_id
 
+    async def _recreate_context(self) -> None:
+        """Recreate the pmapi context after expiration."""
+        if self._client is None:
+            raise RuntimeError("Client not connected. Use async with context.")
+        resp = await self._client.get(
+            "/pmapi/context",
+            params={"hostspec": self._target_host},
+        )
+        resp.raise_for_status()
+        self._context_id = resp.json()["context"]
+
+    async def _request_with_retry(self, method: str, **kwargs) -> httpx.Response:
+        """Make a request, recreating context on expiration errors.
+
+        Args:
+            method: HTTP method to call.
+            **kwargs: Arguments to pass to the request.
+
+        Returns:
+            The HTTP response.
+
+        Raises:
+            RuntimeError: If client is not connected.
+            httpx.HTTPStatusError: If the request fails after retry.
+        """
+        if self._client is None:
+            raise RuntimeError("Client not connected. Use async with context.")
+
+        resp = await self._client.request(method, **kwargs)
+
+        if resp.status_code == 400:
+            data = resp.json()
+            if "unknown context identifier" in data.get("message", ""):
+                await self._recreate_context()
+                kwargs["params"]["context"] = self._context_id
+                resp = await self._client.request(method, **kwargs)
+
+        return resp
+
     async def fetch(self, metric_names: list[str]) -> dict:
         """Fetch current values for metrics.
 
@@ -85,10 +124,9 @@ class PCPClient:
             RuntimeError: If client is not connected.
             httpx.HTTPStatusError: If the request fails.
         """
-        if self._client is None:
-            raise RuntimeError("Client not connected. Use async with context.")
-        resp = await self._client.get(
-            "/pmapi/fetch",
+        resp = await self._request_with_retry(
+            "GET",
+            url="/pmapi/fetch",
             params={"context": self._context_id, "names": ",".join(metric_names)},
         )
         resp.raise_for_status()
@@ -107,10 +145,9 @@ class PCPClient:
             RuntimeError: If client is not connected.
             httpx.HTTPStatusError: If the request fails.
         """
-        if self._client is None:
-            raise RuntimeError("Client not connected. Use async with context.")
-        resp = await self._client.get(
-            "/pmapi/metric",
+        resp = await self._request_with_retry(
+            "GET",
+            url="/pmapi/metric",
             params={"context": self._context_id, "prefix": pattern},
         )
         resp.raise_for_status()
@@ -129,10 +166,9 @@ class PCPClient:
             RuntimeError: If client is not connected.
             httpx.HTTPStatusError: If the request fails.
         """
-        if self._client is None:
-            raise RuntimeError("Client not connected. Use async with context.")
-        resp = await self._client.get(
-            "/pmapi/metric",
+        resp = await self._request_with_retry(
+            "GET",
+            url="/pmapi/metric",
             params={"context": self._context_id, "names": metric_name},
         )
         resp.raise_for_status()
