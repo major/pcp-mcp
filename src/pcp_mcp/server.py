@@ -109,6 +109,13 @@ Resources:
 - pcp://health - Quick system health summary
 - pcp://metrics/common - Catalog of commonly used metrics
 - pcp://namespaces - Dynamically discovered metric namespaces
+
+Prompts (invoke for guided troubleshooting workflows):
+- diagnose_slow_system: Complete slowness investigation
+- investigate_memory_usage: Memory pressure analysis
+- find_io_bottleneck: Disk I/O troubleshooting
+- analyze_cpu_usage: CPU utilization analysis
+- check_network_performance: Network saturation detection
 """,
         lifespan=lifespan,
     )
