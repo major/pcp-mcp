@@ -1,5 +1,7 @@
 """System health tools for clumped metric queries."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Literal
 
@@ -94,7 +96,10 @@ def register_system_tools(mcp: FastMCP) -> None:
             list[str] | None,
             Field(
                 default=None,
-                description="Categories to include: cpu, memory, disk, network, load",
+                description=(
+                    "Categories to include: cpu, memory, disk, network, load. "
+                    "Defaults to all five if not specified."
+                ),
             ),
         ] = None,
         sample_interval: Annotated[
@@ -112,6 +117,16 @@ def register_system_tools(mcp: FastMCP) -> None:
         Returns CPU, memory, disk I/O, network I/O, and load metrics in a single
         call. For rate metrics (CPU %, disk I/O, network throughput), takes two
         samples to calculate per-second rates.
+
+        Use this tool FIRST for system troubleshooting. It automatically handles
+        counter-to-rate conversion. Do NOT use query_metrics() for CPU, disk, or
+        network counters - those return raw cumulative values since boot.
+
+        Examples:
+            get_system_snapshot() - Quick health check (all categories)
+            get_system_snapshot(categories=["cpu", "memory"]) - CPU and memory only
+            get_system_snapshot(categories=["cpu", "load"]) - CPU and load averages
+            get_system_snapshot(categories=["disk", "network"]) - I/O analysis
         """
         from pcp_mcp.errors import handle_pcp_error
 
@@ -177,6 +192,11 @@ def register_system_tools(mcp: FastMCP) -> None:
 
         For CPU and I/O, takes two samples to calculate rates. Memory is instantaneous.
         Returns the top N processes sorted by the requested resource.
+
+        Examples:
+            get_process_top() - Top 10 by CPU (default)
+            get_process_top(sort_by="memory", limit=20) - Top 20 memory consumers
+            get_process_top(sort_by="io", sample_interval=2.0) - Top I/O with longer sample
         """
         client = get_client(ctx)
 

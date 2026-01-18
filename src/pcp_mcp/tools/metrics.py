@@ -1,5 +1,7 @@
 """Core metric tools for querying PCP metrics."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Annotated
 
 from fastmcp import Context
@@ -28,6 +30,14 @@ def register_metrics_tools(mcp: FastMCP) -> None:
 
         Returns the current value for each requested metric. For metrics with
         instances (e.g., per-CPU, per-disk), returns one MetricValue per instance.
+
+        Examples:
+            query_metrics(["kernel.all.load"]) - Get load averages
+            query_metrics(["mem.util.available", "mem.physmem"]) - Get memory stats
+            query_metrics(["hinv.ncpu"]) - Get CPU count
+
+        Warning: CPU, disk, and network metrics are counters (cumulative since boot).
+        Use get_system_snapshot() instead for rates.
         """
         from pcp_mcp.errors import handle_pcp_error
 
@@ -73,6 +83,12 @@ def register_metrics_tools(mcp: FastMCP) -> None:
 
         Use this to discover available metrics before querying them.
         Returns metric names and brief descriptions.
+
+        Examples:
+            search_metrics("kernel.all") - Find kernel-wide metrics
+            search_metrics("mem.util") - Find memory utilization metrics
+            search_metrics("disk.dev") - Find per-disk metrics
+            search_metrics("network.interface") - Find per-interface metrics
         """
         from pcp_mcp.errors import handle_pcp_error
 
@@ -103,6 +119,11 @@ def register_metrics_tools(mcp: FastMCP) -> None:
 
         Returns type, semantics, units, and help text for the metric.
         Use this to understand what a metric measures and how to interpret it.
+
+        Examples:
+            describe_metric("kernel.all.load") - Learn about load average semantics
+            describe_metric("mem.util.available") - Understand available memory
+            describe_metric("disk.all.read_bytes") - Check if metric is counter vs instant
         """
         from fastmcp.exceptions import ToolError
 
