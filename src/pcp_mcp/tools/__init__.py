@@ -15,5 +15,7 @@ def register_tools(mcp: FastMCP) -> None:
         mcp: The FastMCP server instance.
     """
     from pcp_mcp.tools.metrics import register_metrics_tools
+    from pcp_mcp.tools.system import register_system_tools
 
     register_metrics_tools(mcp)
+    register_system_tools(mcp)
