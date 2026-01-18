@@ -169,54 +169,82 @@ def build_network_metrics(data: dict) -> NetworkMetrics:
     )
 
 
+def _extract_process_data_sources(data: dict) -> dict[str, dict]:
+    """Extract all process data sources from raw PCP data."""
+    return {
+        "pid": data.get("proc.psinfo.pid", {}).get("instances", {}),
+        "cmd": data.get("proc.psinfo.cmd", {}).get("instances", {}),
+        "args": data.get("proc.psinfo.psargs", {}).get("instances", {}),
+        "rss": data.get("proc.memory.rss", {}).get("instances", {}),
+        "utime": data.get("proc.psinfo.utime", {}).get("instances", {}),
+        "stime": data.get("proc.psinfo.stime", {}).get("instances", {}),
+        "io_read": data.get("proc.io.read_bytes", {}).get("instances", {}),
+        "io_write": data.get("proc.io.write_bytes", {}).get("instances", {}),
+    }
+
+
+def _calculate_cpu_percent(
+    inst_id: str, utime_data: dict, stime_data: dict, include_cpu: bool
+) -> float | None:
+    """Calculate CPU percentage for a process instance."""
+    if not include_cpu and not utime_data:
+        return None
+    utime = float(utime_data.get(inst_id, 0))
+    stime = float(stime_data.get(inst_id, 0))
+    return (utime + stime) / 10.0
+
+
+def _calculate_io_metrics(
+    inst_id: str, io_read_data: dict, io_write_data: dict, include_io: bool
+) -> tuple[float | None, float | None]:
+    """Calculate I/O read/write metrics for a process instance."""
+    if not include_io and not io_read_data:
+        return None, None
+    io_read = float(io_read_data.get(inst_id, 0))
+    io_write = float(io_write_data.get(inst_id, 0))
+    return io_read, io_write
+
+
+def _build_process_info(
+    inst_id: str, sources: dict[str, dict], sort_by: str, total_mem: float
+) -> ProcessInfo | None:
+    """Build a single ProcessInfo from instance data."""
+    pid = int(sources["pid"].get(inst_id, 0))
+    if pid <= 0:
+        return None
+
+    cmd = str(sources["cmd"].get(inst_id, "unknown"))
+    cmdline = str(sources["args"].get(inst_id, cmd))[:200]
+    rss = int(sources["rss"].get(inst_id, 0)) * 1024
+    rss_pct = (rss / total_mem * 100) if total_mem > 0 else 0.0
+
+    cpu_pct = _calculate_cpu_percent(inst_id, sources["utime"], sources["stime"], sort_by == "cpu")
+
+    io_read, io_write = _calculate_io_metrics(
+        inst_id, sources["io_read"], sources["io_write"], sort_by == "io"
+    )
+
+    return ProcessInfo(
+        pid=pid,
+        command=cmd,
+        cmdline=cmdline,
+        cpu_percent=round(cpu_pct, 1) if cpu_pct is not None else None,
+        rss_bytes=rss,
+        rss_percent=round(rss_pct, 1),
+        io_read_bytes_per_sec=round(io_read, 1) if io_read is not None else None,
+        io_write_bytes_per_sec=round(io_write, 1) if io_write is not None else None,
+    )
+
+
 def build_process_list(data: dict, sort_by: str, total_mem: float, ncpu: int) -> list[ProcessInfo]:
     """Build list of ProcessInfo from fetched data."""
-    pid_data = data.get("proc.psinfo.pid", {}).get("instances", {})
-    cmd_data = data.get("proc.psinfo.cmd", {}).get("instances", {})
-    args_data = data.get("proc.psinfo.psargs", {}).get("instances", {})
-    rss_data = data.get("proc.memory.rss", {}).get("instances", {})
-
-    utime_data = data.get("proc.psinfo.utime", {}).get("instances", {})
-    stime_data = data.get("proc.psinfo.stime", {}).get("instances", {})
-    io_read_data = data.get("proc.io.read_bytes", {}).get("instances", {})
-    io_write_data = data.get("proc.io.write_bytes", {}).get("instances", {})
-
+    sources = _extract_process_data_sources(data)
     processes: list[ProcessInfo] = []
 
-    for inst_id in pid_data:
-        pid = int(pid_data.get(inst_id, 0))
-        if pid <= 0:
-            continue
-
-        cmd = str(cmd_data.get(inst_id, "unknown"))
-        cmdline = str(args_data.get(inst_id, cmd))[:200]
-        rss = int(rss_data.get(inst_id, 0)) * 1024
-        rss_pct = (rss / total_mem * 100) if total_mem > 0 else 0.0
-
-        cpu_pct = None
-        if sort_by == "cpu" or utime_data:
-            utime = float(utime_data.get(inst_id, 0))
-            stime = float(stime_data.get(inst_id, 0))
-            cpu_pct = (utime + stime) / 10.0
-
-        io_read = None
-        io_write = None
-        if sort_by == "io" or io_read_data:
-            io_read = float(io_read_data.get(inst_id, 0))
-            io_write = float(io_write_data.get(inst_id, 0))
-
-        processes.append(
-            ProcessInfo(
-                pid=pid,
-                command=cmd,
-                cmdline=cmdline,
-                cpu_percent=round(cpu_pct, 1) if cpu_pct is not None else None,
-                rss_bytes=rss,
-                rss_percent=round(rss_pct, 1),
-                io_read_bytes_per_sec=round(io_read, 1) if io_read is not None else None,
-                io_write_bytes_per_sec=round(io_write, 1) if io_write is not None else None,
-            )
-        )
+    for inst_id in sources["pid"]:
+        process = _build_process_info(inst_id, sources, sort_by, total_mem)
+        if process is not None:
+            processes.append(process)
 
     return processes
 
