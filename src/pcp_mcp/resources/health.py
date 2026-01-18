@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from fastmcp import Context
@@ -43,7 +43,7 @@ def register_health_resources(mcp: FastMCP) -> None:
         memory = build_memory_metrics(data)
         load = build_load_metrics(data)
 
-        timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
         return f"""# System Health Summary
 Host: {client.target_host}

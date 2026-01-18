@@ -1,6 +1,8 @@
 """System health tools for clumped metric queries."""
 
-from datetime import UTC, datetime
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Literal
 
 from fastmcp import Context
@@ -135,7 +137,7 @@ def register_system_tools(mcp: FastMCP) -> None:
             raise handle_pcp_error(e, "fetching system snapshot") from e
 
         snapshot = SystemSnapshot(
-            timestamp=datetime.now(UTC).isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             hostname=client.target_host,
         )
 
@@ -216,7 +218,7 @@ def register_system_tools(mcp: FastMCP) -> None:
         assessment = assess_processes(processes, sort_by, ncpu)
 
         return ProcessTopResult(
-            timestamp=datetime.now(UTC).isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             hostname=client.target_host,
             sort_by=sort_by,
             sample_interval=sample_interval,

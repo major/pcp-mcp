@@ -1,5 +1,7 @@
 """Core metric tools for querying PCP metrics."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Annotated
 
 from fastmcp import Context
