@@ -25,15 +25,15 @@ uv add pcp-mcp
 ## 📋 Requirements
 
 - **Python**: 3.10+
-- **PCP**: Performance Co-Pilot with `pmproxy` running
+- **PCP**: Performance Co-Pilot with `pmcd` and `pmproxy` running
   ```bash
   # Fedora/RHEL/CentOS
   sudo dnf install pcp
-  sudo systemctl enable --now pmproxy
+  sudo systemctl enable --now pmcd pmproxy
   
   # Ubuntu/Debian
   sudo apt install pcp
-  sudo systemctl enable --now pmproxy
+  sudo systemctl enable --now pmcd pmproxy
   ```
 
 ## ⚙️ Configuration

@@ -22,14 +22,14 @@ uv add pcp-mcp
 
 ```bash
 sudo dnf install pcp
-sudo systemctl enable --now pmproxy
+sudo systemctl enable --now pmcd pmproxy
 ```
 
 **Ubuntu/Debian:**
 
 ```bash
 sudo apt install pcp
-sudo systemctl enable --now pmproxy
+sudo systemctl enable --now pmcd pmproxy
 ```
 
 **Verify PCP is running:**
