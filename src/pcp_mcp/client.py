@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Self
 
 import httpx
@@ -137,3 +138,64 @@ class PCPClient:
         resp.raise_for_status()
         metrics = resp.json().get("metrics", [])
         return metrics[0] if metrics else {}
+
+    async def fetch_with_rates(
+        self,
+        metric_names: list[str],
+        counter_metrics: set[str],
+        sample_interval: float = 1.0,
+    ) -> dict[str, dict]:
+        """Fetch metrics, calculating rates for counters.
+
+        Takes two samples separated by sample_interval seconds.
+        Counter metrics are converted to per-second rates.
+        Gauge metrics return the second sample's value.
+
+        Args:
+            metric_names: List of PCP metric names to fetch.
+            counter_metrics: Set of metric names that are counters.
+            sample_interval: Seconds between samples for rate calculation.
+
+        Returns:
+            Dict mapping metric name to {value, instances} where value/instances
+            contain the rate (for counters) or instant value (for gauges).
+        """
+        t1 = await self.fetch(metric_names)
+        await asyncio.sleep(sample_interval)
+        t2 = await self.fetch(metric_names)
+
+        ts1 = t1.get("timestamp", {}).get("s", 0) + t1.get("timestamp", {}).get("us", 0) / 1e6
+        ts2 = t2.get("timestamp", {}).get("s", 0) + t2.get("timestamp", {}).get("us", 0) / 1e6
+        elapsed = ts2 - ts1 if ts2 > ts1 else sample_interval
+
+        results: dict[str, dict] = {}
+
+        values_t1 = {v.get("name"): v for v in t1.get("values", [])}
+        values_t2 = {v.get("name"): v for v in t2.get("values", [])}
+
+        for metric_name in metric_names:
+            v1_data = values_t1.get(metric_name, {})
+            v2_data = values_t2.get(metric_name, {})
+
+            instances_t1 = {
+                inst.get("instance", -1): inst.get("value", 0)
+                for inst in v1_data.get("instances", [])
+            }
+            instances_t2 = {
+                inst.get("instance", -1): inst.get("value", 0)
+                for inst in v2_data.get("instances", [])
+            }
+
+            if metric_name in counter_metrics:
+                computed: dict[str | int, float] = {}
+                for inst_id, val2 in instances_t2.items():
+                    val1 = instances_t1.get(inst_id, val2)
+                    delta = val2 - val1
+                    if delta < 0:
+                        delta = val2
+                    computed[inst_id] = delta / elapsed
+                results[metric_name] = {"instances": computed, "is_rate": True}
+            else:
+                results[metric_name] = {"instances": instances_t2, "is_rate": False}
+
+        return results
