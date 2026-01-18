@@ -225,6 +225,25 @@ class TestBuildProcessList:
         assert len(processes) == 1
         assert processes[0].pid == 1234
 
+    def test_memory_sort_omits_cpu_and_io_when_data_missing(self) -> None:
+        data = {
+            "proc.psinfo.pid": {"instances": {1: 1234}},
+            "proc.psinfo.cmd": {"instances": {1: "app"}},
+            "proc.psinfo.psargs": {"instances": {1: "app --run"}},
+            "proc.memory.rss": {"instances": {1: 100_000}},
+            "proc.psinfo.utime": {"instances": {}},
+            "proc.psinfo.stime": {"instances": {}},
+            "proc.io.read_bytes": {"instances": {}},
+            "proc.io.write_bytes": {"instances": {}},
+        }
+        processes = build_process_list(data, sort_by="memory", total_mem=16_000_000_000, ncpu=4)
+
+        assert len(processes) == 1
+        assert processes[0].pid == 1234
+        assert processes[0].cpu_percent is None
+        assert processes[0].io_read_bytes_per_sec is None
+        assert processes[0].io_write_bytes_per_sec is None
+
 
 class TestGetSortKey:
     def test_cpu_sort(self, process_metrics_data) -> None:
