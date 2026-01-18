@@ -207,7 +207,7 @@ class TestBuildMemoryMetrics:
 class TestBuildLoadMetrics:
     def test_normal_load(self) -> None:
         data = {
-            "kernel.all.load": {"instances": {"1 minute": 1.5, "5 minute": 1.2, "15 minute": 1.0}},
+            "kernel.all.load": {"instances": {1: 1.5, 5: 1.2, 15: 1.0}},
             "kernel.all.runnable": {"instances": {-1: 3}},
             "kernel.all.nprocs": {"instances": {-1: 200}},
             "hinv.ncpu": {"instances": {-1: 4}},
@@ -221,7 +221,7 @@ class TestBuildLoadMetrics:
 
     def test_high_load(self) -> None:
         data = {
-            "kernel.all.load": {"instances": {"1 minute": 10.0, "5 minute": 8.0, "15 minute": 6.0}},
+            "kernel.all.load": {"instances": {1: 10.0, 5: 8.0, 15: 6.0}},
             "kernel.all.runnable": {"instances": {-1: 15}},
             "kernel.all.nprocs": {"instances": {-1: 200}},
             "hinv.ncpu": {"instances": {-1: 4}},

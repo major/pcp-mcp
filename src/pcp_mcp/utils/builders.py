@@ -95,9 +95,9 @@ def build_load_metrics(data: dict) -> LoadMetrics:
     """Build load metrics from fetched data."""
     load_data = data.get("kernel.all.load", {}).get("instances", {})
 
-    load_1m = float(load_data.get("1 minute", load_data.get(1, 0.0)))
-    load_5m = float(load_data.get("5 minute", load_data.get(5, 0.0)))
-    load_15m = float(load_data.get("15 minute", load_data.get(15, 0.0)))
+    load_1m = float(load_data.get(1, 0.0))
+    load_5m = float(load_data.get(5, 0.0))
+    load_15m = float(load_data.get(15, 0.0))
 
     runnable = int(get_first_value(data, "kernel.all.runnable"))
     nprocs = int(get_first_value(data, "kernel.all.nprocs"))
