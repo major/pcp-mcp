@@ -58,10 +58,13 @@ def create_server() -> FastMCP:
         name="pcp",
         instructions=f"""PCP MCP Server - Performance Co-Pilot Metrics
 
-Monitoring target: {settings.target_host}
+Default monitoring target: {settings.target_host}
 pmproxy endpoint: {settings.base_url}
 
 🎯 QUICK START GUIDE FOR LLMs
+
+All tools support an optional 'host' parameter to query different hosts without
+reconfiguring the server. Example: get_system_snapshot(host="webserver1.example.com")
 
 Common troubleshooting workflows:
 - "System is slow" → get_system_snapshot(categories=["cpu", "load", "memory"])
@@ -70,6 +73,7 @@ Common troubleshooting workflows:
 - "Disk I/O issues" → get_system_snapshot(categories=["disk"]) + search_metrics("disk.dev")
 - "Network saturation" → get_system_snapshot(categories=["network"]) +
   search_metrics("network.interface")
+- "Compare hosts" → get_system_snapshot(host="host1") vs get_system_snapshot(host="host2")
 
 📊 METRIC NAMESPACE GUIDE
 

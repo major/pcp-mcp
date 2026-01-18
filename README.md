@@ -113,6 +113,8 @@ For remote monitoring:
 
 ## 🛠️ Available Tools
 
+All tools support an optional `host` parameter to query different hosts without reconfiguring the server.
+
 ### System Monitoring
 
 - **`get_system_snapshot`** - Point-in-time system overview (CPU, memory, disk, network, load)
@@ -135,6 +137,29 @@ For remote monitoring:
 
 "Get detailed info about kernel.all.load"
 → Uses describe_metric(name="kernel.all.load")
+
+"Compare CPU usage between webserver1 and webserver2"
+→ Uses get_system_snapshot(host="webserver1.example.com") and
+  get_system_snapshot(host="webserver2.example.com")
+
+"What's the memory usage on the database server?"
+→ Uses get_system_snapshot(categories=["memory"], host="db.example.com")
+```
+
+### Multi-Host Monitoring
+
+Query multiple hosts without reconfiguring the server by using the `host` parameter:
+
+```python
+# Query default configured host
+get_system_snapshot()
+
+# Query specific remote host
+get_system_snapshot(host="webserver1.example.com")
+
+# Query different hosts in sequence
+query_metrics(["kernel.all.load"], host="web1.example.com")
+query_metrics(["kernel.all.load"], host="web2.example.com")
 ```
 
 ## 📚 Resources
@@ -159,6 +184,8 @@ Ask Claude to:
 - "Give me a health check of the production server"
 - "Compare CPU usage over the last minute"
 - "Monitor network traffic on eth0"
+- "Check disk I/O on all web servers" (using host parameter)
+- "Compare memory usage across the database cluster"
 
 ### Capacity Planning
 
