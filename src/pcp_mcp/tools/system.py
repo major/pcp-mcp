@@ -116,6 +116,10 @@ def register_system_tools(mcp: FastMCP) -> None:
         Returns CPU, memory, disk I/O, network I/O, and load metrics in a single
         call. For rate metrics (CPU %, disk I/O, network throughput), takes two
         samples to calculate per-second rates.
+
+        Use this tool FIRST for system troubleshooting. It automatically handles
+        counter-to-rate conversion. Do NOT use query_metrics() for CPU, disk, or
+        network counters - those return raw cumulative values since boot.
         """
         from pcp_mcp.errors import handle_pcp_error
 
