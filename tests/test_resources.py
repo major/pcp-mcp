@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import httpx
+import pytest
+from fastmcp.exceptions import ToolError
+
+from pcp_mcp.resources.catalog import register_catalog_resources
 from pcp_mcp.resources.health import register_health_resources
 
 if TYPE_CHECKING:
@@ -15,31 +20,13 @@ class TestHealthResource:
         self,
         mock_context: MagicMock,
         capture_resources,
+        full_system_snapshot_data,
     ) -> None:
-        mock_context.request_context.lifespan_context["client"].fetch_with_rates.return_value = {
-            "kernel.all.cpu.user": {"instances": {-1: 20.0}, "is_rate": True},
-            "kernel.all.cpu.sys": {"instances": {-1: 10.0}, "is_rate": True},
-            "kernel.all.cpu.idle": {"instances": {-1: 65.0}, "is_rate": True},
-            "kernel.all.cpu.wait.total": {"instances": {-1: 5.0}, "is_rate": True},
-            "hinv.ncpu": {"instances": {-1: 4}, "is_rate": False},
-            "mem.physmem": {"instances": {-1: 16000000}, "is_rate": False},
-            "mem.util.used": {"instances": {-1: 8000000}, "is_rate": False},
-            "mem.util.free": {"instances": {-1: 4000000}, "is_rate": False},
-            "mem.util.available": {"instances": {-1: 6000000}, "is_rate": False},
-            "mem.util.cached": {"instances": {-1: 2000000}, "is_rate": False},
-            "mem.util.bufmem": {"instances": {-1: 1000000}, "is_rate": False},
-            "mem.util.swapTotal": {"instances": {-1: 8000000}, "is_rate": False},
-            "mem.util.swapFree": {"instances": {-1: 7000000}, "is_rate": False},
-            "kernel.all.load": {
-                "instances": {"1 minute": 1.5, "5 minute": 1.2, "15 minute": 1.0},
-                "is_rate": False,
-            },
-            "kernel.all.runnable": {"instances": {-1: 3}, "is_rate": False},
-            "kernel.all.nprocs": {"instances": {-1: 200}, "is_rate": False},
-        }
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.return_value = full_system_snapshot_data()
 
         resources = capture_resources(register_health_resources)
-
         result = await resources["pcp://health"](mock_context)
 
         assert "System Health Summary" in result
@@ -58,8 +45,95 @@ class TestHealthResource:
         ].fetch_with_rates.side_effect = Exception("Connection failed")
 
         resources = capture_resources(register_health_resources)
-
         result = await resources["pcp://health"](mock_context)
 
         assert "Error" in result
         assert "Connection failed" in result
+
+
+class TestCommonMetricsCatalog:
+    @pytest.mark.parametrize(
+        "expected_content",
+        [
+            "Common PCP Metric Groups",
+            "kernel.all.cpu.user",
+            "mem.physmem",
+            "disk.all.read_bytes",
+            "Legend",
+        ],
+    )
+    def test_contains_expected_sections(self, capture_resources, expected_content: str) -> None:
+        resources = capture_resources(register_catalog_resources)
+        result = resources["pcp://metrics/common"]()
+        assert expected_content in result
+
+
+class TestMetricNamespaces:
+    async def test_returns_live_discovery(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+        namespace_search_response,
+        pmda_status_response,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].search.return_value = namespace_search_response()
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch.return_value = pmda_status_response()
+
+        resources = capture_resources(register_catalog_resources)
+        result = await resources["pcp://namespaces"](mock_context)
+
+        assert "PCP Metric Namespaces (Live Discovery)" in result
+        assert "kernel" in result
+        assert "mem" in result
+        assert "disk" in result
+        assert "Active PMDAs" in result
+
+    async def test_handles_connection_error(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].search.side_effect = httpx.ConnectError("Connection refused")
+
+        resources = capture_resources(register_catalog_resources)
+
+        with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
+            await resources["pcp://namespaces"](mock_context)
+
+    @pytest.mark.parametrize(
+        ("pmdas", "expected_count"),
+        [
+            ([("linux", 0), ("pmcd", 0)], 2),
+            ([("linux", 0), ("broken", 1)], 1),
+            ([("linux", 0), (-1, 0)], 1),
+            ([], 0),
+        ],
+    )
+    async def test_filters_pmdas_by_status(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+        namespace_search_response,
+        pmda_status_response,
+        pmdas: list[tuple],
+        expected_count: int,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].search.return_value = namespace_search_response(["kernel.all.load"])
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch.return_value = pmda_status_response(pmdas)
+
+        resources = capture_resources(register_catalog_resources)
+        result = await resources["pcp://namespaces"](mock_context)
+
+        assert "Active PMDAs:" in result
+        if expected_count == 0:
+            assert "Unable to enumerate PMDAs" in result
