@@ -1,0 +1,102 @@
+# PROJECT KNOWLEDGE BASE
+
+**Generated:** 2026-01-18
+**Commit:** bb3250e
+**Branch:** main
+
+## OVERVIEW
+
+MCP server for Performance Co-Pilot (PCP) metrics. Exposes system performance data (CPU, memory, disk, network, processes) via Model Context Protocol tools and resources. Built on FastMCP 2.0+ with httpx async client for pmproxy REST API.
+
+## STRUCTURE
+
+```
+pcp-mcp/
+├── src/pcp_mcp/           # Core package (see src/pcp_mcp/AGENTS.md)
+│   ├── tools/             # MCP tools (see src/pcp_mcp/tools/AGENTS.md)
+│   ├── resources/         # MCP resources (read-only)
+│   ├── utils/             # Extractors, builders, decorators
+│   └── prompts/           # LLM system prompts
+├── tests/                 # Test suite (see tests/AGENTS.md)
+├── docs/                  # MkDocs source
+└── site/                  # Generated docs (gitignored)
+```
+
+## WHERE TO LOOK
+
+| Task | Location | Notes |
+|------|----------|-------|
+| Add new tool | `src/pcp_mcp/tools/` | Register in `__init__.py` |
+| Add new resource | `src/pcp_mcp/resources/` | Register in `__init__.py` |
+| Modify HTTP client | `src/pcp_mcp/client.py` | Async context manager |
+| Change config | `src/pcp_mcp/config.py` | Pydantic settings, `PCP_` prefix |
+| Add response model | `src/pcp_mcp/models.py` | Pydantic BaseModel |
+| Map exceptions | `src/pcp_mcp/errors.py` | `handle_pcp_error()` |
+| CLI changes | `src/pcp_mcp/__init__.py` | `main()` with argparse |
+| Server setup | `src/pcp_mcp/server.py` | `create_server()` + lifespan |
+
+## CONVENTIONS
+
+### Code Style
+- **Line length**: 100 chars
+- **Docstrings**: Google-style (enforced by ruff D rules)
+- **Imports**: `from __future__ import annotations` at top
+- **Async**: Default for I/O operations
+
+### Ruff Rules
+`E, F, I, UP, B, SIM, ASYNC, D` — tests exempt from D rules
+
+### Type Checking
+- **Tool**: ty (not pyright, not mypy)
+- **Target**: Python 3.14
+- **Mode**: standard
+
+### Environment Variables
+All prefixed with `PCP_`:
+- `PCP_HOST`, `PCP_PORT` — pmproxy connection
+- `PCP_TARGET_HOST` — remote pmcd host
+- `PCP_USE_TLS`, `PCP_TIMEOUT` — connection options
+- `PCP_USERNAME`, `PCP_PASSWORD` — auth (optional)
+
+## ANTI-PATTERNS
+
+### Counter Metrics (CRITICAL)
+These are CUMULATIVE (since boot), NOT per-second rates:
+- `kernel.all.cpu.*`
+- `disk.all.read_bytes`, `disk.all.write_bytes`
+- `network.interface.in.bytes`, `network.interface.out.bytes`
+- `proc.psinfo.utime`, `proc.psinfo.stime`
+
+**DO NOT** query with `query_metrics()` expecting rates.
+**USE** `get_system_snapshot()` or `get_process_top()` instead.
+
+### Tool Patterns
+- **NEVER** suppress types: `as any`, `@ts-ignore` (N/A for Python but pattern applies)
+- **NEVER** use empty `except:` blocks
+- **ALWAYS** wrap exceptions with `handle_pcp_error()`
+- **ALWAYS** return Pydantic models from tools
+- **ALWAYS** use `Annotated[type, Field(...)]` for tool params
+
+### Resources
+- Resources are READ-ONLY
+- No write operations in resource handlers
+
+## COMMANDS
+
+```bash
+make check        # Full CI: lint + format-check + typecheck + test
+make lint         # ruff check .
+make format       # ruff format .
+make typecheck    # ty check
+make test         # pytest with coverage
+make fix          # Auto-fix lint + format
+make complexity   # Fail on D+ complexity functions
+```
+
+## NOTES
+
+- **Python**: 3.10+ required (3.14 target)
+- **FastMCP**: 2.0+ required
+- **pmproxy**: Must be running for tests against real PCP
+- **Tests**: Use `respx` for httpx mocking, not real network
+- **Coverage**: Uploaded to Codecov on Python 3.14 only
