@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING
 
 from pcp_mcp.resources.health import register_health_resources
 from pcp_mcp.resources.metrics import register_metrics_resources
+
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
 
 
 class TestHealthResource:
@@ -74,7 +77,6 @@ class TestMetricsResource:
             {"name": "kernel.all.cpu.sys", "text-oneline": "System CPU time"},
         ]
 
-        mcp = MagicMock()
         resources = capture_resources(register_metrics_resources)
 
         result = await resources["pcp://metrics/{pattern}"](mock_context, pattern="kernel.all.cpu")
@@ -90,7 +92,6 @@ class TestMetricsResource:
     ) -> None:
         mock_context.request_context.lifespan_context["client"].search.return_value = []
 
-        mcp = MagicMock()
         resources = capture_resources(register_metrics_resources)
 
         result = await resources["pcp://metrics/{pattern}"](mock_context, pattern="nonexistent")
@@ -110,7 +111,6 @@ class TestMetricsResource:
             "text-help": "Time spent in user mode",
         }
 
-        mcp = MagicMock()
         resources = capture_resources(register_metrics_resources)
 
         result = await resources["pcp://metric/{name}"](mock_context, name="kernel.all.cpu.user")
@@ -128,7 +128,6 @@ class TestMetricsResource:
     ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {}
 
-        mcp = MagicMock()
         resources = capture_resources(register_metrics_resources)
 
         result = await resources["pcp://metric/{name}"](mock_context, name="nonexistent")

@@ -12,6 +12,19 @@ if TYPE_CHECKING:
     from pcp_mcp.config import PCPMCPSettings
 
 
+def _validate_context(ctx: Context) -> None:
+    """Validate context has lifespan_context available.
+
+    Args:
+        ctx: MCP context.
+
+    Raises:
+        ToolError: If context is not available.
+    """
+    if ctx.request_context is None or ctx.request_context.lifespan_context is None:
+        raise ToolError("Server context not available")
+
+
 def get_client(ctx: Context) -> PCPClient:
     """Get PCPClient from context.
 
@@ -24,8 +37,7 @@ def get_client(ctx: Context) -> PCPClient:
     Raises:
         ToolError: If context is not available.
     """
-    if ctx.request_context is None or ctx.request_context.lifespan_context is None:
-        raise ToolError("Server context not available")
+    _validate_context(ctx)
     return ctx.request_context.lifespan_context["client"]
 
 
@@ -41,6 +53,5 @@ def get_settings(ctx: Context) -> PCPMCPSettings:
     Raises:
         ToolError: If context is not available.
     """
-    if ctx.request_context is None or ctx.request_context.lifespan_context is None:
-        raise ToolError("Server context not available")
+    _validate_context(ctx)
     return ctx.request_context.lifespan_context["settings"]

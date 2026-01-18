@@ -8,12 +8,11 @@ from typing import TYPE_CHECKING
 from fastmcp import Context
 
 from pcp_mcp.context import get_client
-from pcp_mcp.tools.system import (
-    COUNTER_METRICS,
-    SNAPSHOT_METRICS,
-    _build_cpu_metrics,
-    _build_load_metrics,
-    _build_memory_metrics,
+from pcp_mcp.tools.system import COUNTER_METRICS, SNAPSHOT_METRICS
+from pcp_mcp.utils.builders import (
+    build_cpu_metrics,
+    build_load_metrics,
+    build_memory_metrics,
 )
 
 if TYPE_CHECKING:
@@ -40,9 +39,9 @@ def register_health_resources(mcp: FastMCP) -> None:
         except Exception as e:
             return f"Error fetching health data: {e}"
 
-        cpu = _build_cpu_metrics(data)
-        memory = _build_memory_metrics(data)
-        load = _build_load_metrics(data)
+        cpu = build_cpu_metrics(data)
+        memory = build_memory_metrics(data)
+        load = build_load_metrics(data)
 
         timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 

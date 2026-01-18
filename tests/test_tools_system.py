@@ -8,12 +8,16 @@ import pytest
 from fastmcp.exceptions import ToolError
 
 from pcp_mcp.tools.system import (
-    _build_cpu_metrics,
-    _build_disk_metrics,
-    _build_load_metrics,
-    _build_memory_metrics,
-    _build_network_metrics,
+    COUNTER_METRICS,
+    SNAPSHOT_METRICS,
     register_system_tools,
+)
+from pcp_mcp.utils.builders import (
+    build_cpu_metrics,
+    build_disk_metrics,
+    build_load_metrics,
+    build_memory_metrics,
+    build_network_metrics,
 )
 
 
@@ -160,7 +164,7 @@ class TestBuildCPUMetrics:
             "kernel.all.cpu.wait.total": {"instances": {-1: 5.0}},
             "hinv.ncpu": {"instances": {-1: 4}},
         }
-        result = _build_cpu_metrics(data)
+        result = build_cpu_metrics(data)
 
         assert result.user_percent == 20.0
         assert result.system_percent == 10.0
@@ -177,7 +181,7 @@ class TestBuildCPUMetrics:
             "kernel.all.cpu.wait.total": {"instances": {-1: 30.0}},
             "hinv.ncpu": {"instances": {-1: 4}},
         }
-        result = _build_cpu_metrics(data)
+        result = build_cpu_metrics(data)
 
         assert "I/O wait" in result.assessment
 
@@ -194,7 +198,7 @@ class TestBuildMemoryMetrics:
             "mem.util.swapTotal": {"instances": {-1: 8000000}},
             "mem.util.swapFree": {"instances": {-1: 7000000}},
         }
-        result = _build_memory_metrics(data)
+        result = build_memory_metrics(data)
 
         assert result.used_percent == 50.0
         assert "normal" in result.assessment.lower()
@@ -208,7 +212,7 @@ class TestBuildLoadMetrics:
             "kernel.all.nprocs": {"instances": {-1: 200}},
             "hinv.ncpu": {"instances": {-1: 4}},
         }
-        result = _build_load_metrics(data)
+        result = build_load_metrics(data)
 
         assert result.load_1m == 1.5
         assert result.load_5m == 1.2
@@ -222,7 +226,7 @@ class TestBuildLoadMetrics:
             "kernel.all.nprocs": {"instances": {-1: 200}},
             "hinv.ncpu": {"instances": {-1: 4}},
         }
-        result = _build_load_metrics(data)
+        result = build_load_metrics(data)
 
         assert "high" in result.assessment.lower() or "elevated" in result.assessment.lower()
 
@@ -235,7 +239,7 @@ class TestBuildDiskMetrics:
             "disk.all.read": {"instances": {-1: 100.0}},
             "disk.all.write": {"instances": {-1: 50.0}},
         }
-        result = _build_disk_metrics(data)
+        result = build_disk_metrics(data)
 
         assert result.read_bytes_per_sec == 1000000.0
         assert "low" in result.assessment.lower()
@@ -249,7 +253,7 @@ class TestBuildNetworkMetrics:
             "network.interface.in.packets": {"instances": {"eth0": 1000.0, "lo": 10.0}},
             "network.interface.out.packets": {"instances": {"eth0": 500.0, "lo": 10.0}},
         }
-        result = _build_network_metrics(data)
+        result = build_network_metrics(data)
 
         assert result.in_bytes_per_sec == 101000.0
         assert result.out_bytes_per_sec == 51000.0

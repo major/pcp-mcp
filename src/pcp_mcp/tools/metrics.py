@@ -8,8 +8,8 @@ from fastmcp import Context
 from pydantic import Field
 
 from pcp_mcp.context import get_client
-from pcp_mcp.errors import handle_pcp_error
 from pcp_mcp.models import MetricInfo, MetricSearchResult, MetricValue
+from pcp_mcp.utils.extractors import extract_help_text
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -31,6 +31,8 @@ def register_metrics_tools(mcp: FastMCP) -> None:
         Returns the current value for each requested metric. For metrics with
         instances (e.g., per-CPU, per-disk), returns one MetricValue per instance.
         """
+        from pcp_mcp.errors import handle_pcp_error
+
         client = get_client(ctx)
 
         try:
@@ -70,6 +72,8 @@ def register_metrics_tools(mcp: FastMCP) -> None:
         Use this to discover available metrics before querying them.
         Returns metric names and brief descriptions.
         """
+        from pcp_mcp.errors import handle_pcp_error
+
         client = get_client(ctx)
 
         try:
@@ -80,7 +84,7 @@ def register_metrics_tools(mcp: FastMCP) -> None:
         return [
             MetricSearchResult(
                 name=m.get("name", ""),
-                help_text=m.get("text-oneline") or m.get("text-help"),
+                help_text=extract_help_text(m),
             )
             for m in metrics
         ]
@@ -98,6 +102,9 @@ def register_metrics_tools(mcp: FastMCP) -> None:
         Returns type, semantics, units, and help text for the metric.
         Use this to understand what a metric measures and how to interpret it.
         """
+        from fastmcp.exceptions import ToolError
+        from pcp_mcp.errors import handle_pcp_error
+
         client = get_client(ctx)
 
         try:
@@ -106,8 +113,6 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             raise handle_pcp_error(e, "describing metric") from e
 
         if not info:
-            from fastmcp.exceptions import ToolError
-
             raise ToolError(f"Metric not found: {name}")
 
         return MetricInfo(
@@ -115,7 +120,7 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             type=info.get("type", "unknown"),
             semantics=info.get("sem", "unknown"),
             units=_format_units(info),
-            help_text=info.get("text-help") or info.get("text-oneline"),
+            help_text=extract_help_text(info),
             indom=info.get("indom"),
         )
 

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from fastmcp import Context
 
 from pcp_mcp.context import get_client
+from pcp_mcp.utils.extractors import extract_help_text
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -44,9 +45,9 @@ def register_metrics_resources(mcp: FastMCP) -> None:
 
         for m in metrics[:50]:
             name = m.get("name", "unknown")
-            help_text = m.get("text-oneline") or m.get("text-help", "")
-            if help_text:
-                lines.append(f"- **{name}**: {help_text}")
+            help = extract_help_text(m)
+            if help:
+                lines.append(f"- **{name}**: {help}")
             else:
                 lines.append(f"- **{name}**")
 
@@ -76,7 +77,7 @@ def register_metrics_resources(mcp: FastMCP) -> None:
         semantics = info.get("sem", "unknown")
         units = info.get("units", "none")
         indom = info.get("indom", "none")
-        help_text = info.get("text-help") or info.get("text-oneline", "No description available")
+        help_text = extract_help_text(info, "No description available")
 
         return f"""# {name}
 
