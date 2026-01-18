@@ -1,13 +1,9 @@
 # Resources
 
-## Metrics Resources
+## Health Resources
 
-::: pcp_mcp.resources.metrics
+::: pcp_mcp.resources.health
 
-## System Resources
+## Catalog Resources
 
-::: pcp_mcp.resources.system
-
-## Process Resources
-
-::: pcp_mcp.resources.processes
+::: pcp_mcp.resources.catalog
