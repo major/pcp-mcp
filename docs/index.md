@@ -16,9 +16,9 @@ Query system performance metrics via the Model Context Protocol - CPU, memory, d
 ## Architecture
 
 ```
-┌─────────┐         ┌─────────┐         ┌─────────┐         ┌─────────┐
+┌─────────┐         ┌─────────┐          ┌─────────┐         ┌─────────┐
 │   LLM   │ ◄─MCP─► │ pcp-mcp │ ◄─HTTP─► │ pmproxy │ ◄─────► │  pmcd   │
-└─────────┘         └─────────┘         └─────────┘         └─────────┘
+└─────────┘         └─────────┘          └─────────┘         └─────────┘
                                          (REST API)          (metrics)
 ```
 
