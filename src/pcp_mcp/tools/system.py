@@ -94,7 +94,11 @@ def register_system_tools(mcp: FastMCP) -> None:
             list[str] | None,
             Field(
                 default=None,
-                description="Categories to include: cpu, memory, disk, network, load",
+                description=(
+                    "Categories to include: cpu, memory, disk, network, load, "
+                    "pressure, filesystem, hardware. Defaults to cpu, memory, disk, "
+                    "network, load if not specified."
+                ),
             ),
         ] = None,
         sample_interval: Annotated[
