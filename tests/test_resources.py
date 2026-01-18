@@ -19,12 +19,11 @@ class TestHealthResource:
     async def test_returns_health_summary(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_resources,
         full_system_snapshot_data,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.return_value = full_system_snapshot_data()
+        mock_client.fetch_with_rates.return_value = full_system_snapshot_data()
 
         resources = capture_resources(register_health_resources)
         result = await resources["pcp://health"](mock_context)
@@ -38,11 +37,10 @@ class TestHealthResource:
     async def test_handles_error(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_resources,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.side_effect = Exception("Connection failed")
+        mock_client.fetch_with_rates.side_effect = Exception("Connection failed")
 
         resources = capture_resources(register_health_resources)
         result = await resources["pcp://health"](mock_context)
@@ -72,16 +70,13 @@ class TestMetricNamespaces:
     async def test_returns_live_discovery(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_resources,
         namespace_search_response,
         pmda_status_response,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].search.return_value = namespace_search_response()
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch.return_value = pmda_status_response()
+        mock_client.search.return_value = namespace_search_response()
+        mock_client.fetch.return_value = pmda_status_response()
 
         resources = capture_resources(register_catalog_resources)
         result = await resources["pcp://namespaces"](mock_context)
@@ -95,11 +90,10 @@ class TestMetricNamespaces:
     async def test_handles_connection_error(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_resources,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].search.side_effect = httpx.ConnectError("Connection refused")
+        mock_client.search.side_effect = httpx.ConnectError("Connection refused")
 
         resources = capture_resources(register_catalog_resources)
 
@@ -118,18 +112,15 @@ class TestMetricNamespaces:
     async def test_filters_pmdas_by_status(
         self,
         mock_context: MagicMock,
+        mock_client: MagicMock,
         capture_resources,
         namespace_search_response,
         pmda_status_response,
         pmdas: list[tuple],
         expected_count: int,
     ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].search.return_value = namespace_search_response(["kernel.all.load"])
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch.return_value = pmda_status_response(pmdas)
+        mock_client.search.return_value = namespace_search_response(["kernel.all.load"])
+        mock_client.fetch.return_value = pmda_status_response(pmdas)
 
         resources = capture_resources(register_catalog_resources)
         result = await resources["pcp://namespaces"](mock_context)

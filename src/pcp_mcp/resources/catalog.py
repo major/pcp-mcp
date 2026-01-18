@@ -106,7 +106,7 @@ def register_catalog_resources(mcp: FastMCP) -> None:
         from pcp_mcp.context import get_client
         from pcp_mcp.errors import handle_pcp_error
 
-        client = get_client(ctx)
+        client = await get_client(ctx)
 
         try:
             all_metrics = await client.search("")
