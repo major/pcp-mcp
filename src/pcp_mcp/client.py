@@ -200,8 +200,12 @@ class PCPClient:
         await asyncio.sleep(sample_interval)
         t2 = await self.fetch(metric_names)
 
-        ts1 = t1.get("timestamp", {}).get("s", 0) + t1.get("timestamp", {}).get("us", 0) / 1e6
-        ts2 = t2.get("timestamp", {}).get("s", 0) + t2.get("timestamp", {}).get("us", 0) / 1e6
+        ts1 = t1.get("timestamp", 0.0)
+        ts2 = t2.get("timestamp", 0.0)
+        if isinstance(ts1, dict):
+            ts1 = ts1.get("s", 0) + ts1.get("us", 0) / 1e6
+        if isinstance(ts2, dict):
+            ts2 = ts2.get("s", 0) + ts2.get("us", 0) / 1e6
         elapsed = ts2 - ts1 if ts2 > ts1 else sample_interval
 
         results: dict[str, dict] = {}

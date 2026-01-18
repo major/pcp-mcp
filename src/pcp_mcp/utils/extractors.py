@@ -43,10 +43,12 @@ def extract_help_text(metric_dict: dict, default: str = "") -> str:
 def extract_timestamp(response: dict) -> float:
     """Extract timestamp from pmproxy response.
 
-    Converts PCP timestamp (seconds + microseconds) to float seconds.
+    Handles both float timestamps and dict format {s: ..., us: ...}.
     """
-    ts = response.get("timestamp", {})
-    return ts.get("s", 0) + ts.get("us", 0) / 1e6
+    ts = response.get("timestamp", 0.0)
+    if isinstance(ts, dict):
+        return ts.get("s", 0) + ts.get("us", 0) / 1e6
+    return float(ts)
 
 
 __all__ = [
