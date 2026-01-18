@@ -106,8 +106,8 @@ Tools:
 
 Resources:
 - pcp://health - Quick system health summary
-- pcp://metrics/{{pattern}} - Browse metrics matching pattern
 - pcp://metrics/common - Catalog of commonly used metrics
+- pcp://namespaces - Dynamically discovered metric namespaces
 """,
         lifespan=lifespan,
     )

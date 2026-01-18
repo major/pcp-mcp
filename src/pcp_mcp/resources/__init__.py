@@ -16,8 +16,6 @@ def register_resources(mcp: FastMCP) -> None:
     """
     from pcp_mcp.resources.catalog import register_catalog_resources
     from pcp_mcp.resources.health import register_health_resources
-    from pcp_mcp.resources.metrics import register_metrics_resources
 
     register_health_resources(mcp)
-    register_metrics_resources(mcp)
     register_catalog_resources(mcp)
