@@ -44,14 +44,18 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             instances = metric.get("instances", [])
 
             for inst in instances:
-                instance_name = inst.get("instance")
+                instance_id = inst.get("instance")
                 value = inst.get("value")
+
+                instance_name = None
+                if instance_id is not None and instance_id != -1:
+                    instance_name = str(instance_id)
 
                 results.append(
                     MetricValue(
                         name=metric_name,
                         value=value,
-                        instance=instance_name if instance_name != -1 else None,
+                        instance=instance_name,
                     )
                 )
 
