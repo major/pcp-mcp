@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This project uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
 
+## v1.0.2 (2026-01-19)
+
+### Fix
+
+- wrap list returns in object types for MCP spec compliance
+
 ## v1.0.1 (2026-01-19)
 
 ### Bug Fixes
