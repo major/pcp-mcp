@@ -4,6 +4,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pcp_mcp.icons import (
+    ICON_CPU,
+    ICON_DIAGNOSE,
+    ICON_DISK,
+    ICON_MEMORY,
+    ICON_NETWORK,
+    TAGS_CPU,
+    TAGS_DIAGNOSE,
+    TAGS_DISK,
+    TAGS_MEMORY,
+    TAGS_NETWORK,
+)
+
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
@@ -15,7 +28,7 @@ def register_prompts(mcp: FastMCP) -> None:
         mcp: The FastMCP server instance.
     """
 
-    @mcp.prompt()
+    @mcp.prompt(icons=[ICON_DIAGNOSE], tags=TAGS_DIAGNOSE)
     def diagnose_slow_system() -> str:
         """Diagnose why a system is running slowly.
 
@@ -61,7 +74,7 @@ def register_prompts(mcp: FastMCP) -> None:
    - Recommendations (kill process, add RAM, optimize queries, etc.)
 """
 
-    @mcp.prompt()
+    @mcp.prompt(icons=[ICON_MEMORY], tags=TAGS_MEMORY)
     def investigate_memory_usage() -> str:
         """Investigate memory consumption and identify memory pressure.
 
@@ -113,7 +126,7 @@ def register_prompts(mcp: FastMCP) -> None:
      * Single process consuming >50% = Investigate for memory leak
 """
 
-    @mcp.prompt()
+    @mcp.prompt(icons=[ICON_DISK], tags=TAGS_DISK)
     def find_io_bottleneck() -> str:
         """Find disk I/O bottlenecks and identify processes causing high I/O.
 
@@ -174,7 +187,7 @@ def register_prompts(mcp: FastMCP) -> None:
      * Backup/batch jobs during business hours → Reschedule
 """
 
-    @mcp.prompt()
+    @mcp.prompt(icons=[ICON_CPU], tags=TAGS_CPU)
     def analyze_cpu_usage() -> str:
         """Analyze CPU utilization patterns and identify CPU-bound processes.
 
@@ -235,7 +248,7 @@ def register_prompts(mcp: FastMCP) -> None:
      * Many small processes → Reduce process spawning overhead
 """
 
-    @mcp.prompt()
+    @mcp.prompt(icons=[ICON_NETWORK], tags=TAGS_NETWORK)
     def check_network_performance() -> str:
         """Check network performance and identify bandwidth/error issues.
 

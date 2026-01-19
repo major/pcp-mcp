@@ -6,6 +6,14 @@ from typing import TYPE_CHECKING
 
 from fastmcp import Context
 
+from pcp_mcp.icons import (
+    ICON_CATALOG,
+    ICON_INFO,
+    ICON_NAMESPACE,
+    TAGS_CATALOG,
+    TAGS_DISCOVERY,
+    TAGS_METRICS,
+)
 from pcp_mcp.utils.extractors import extract_help_text, format_units
 
 if TYPE_CHECKING:
@@ -19,7 +27,11 @@ def register_catalog_resources(mcp: FastMCP) -> None:
         mcp: The FastMCP server instance.
     """
 
-    @mcp.resource("pcp://metric/{metric_name}/info")
+    @mcp.resource(
+        "pcp://metric/{metric_name}/info",
+        icons=[ICON_INFO],
+        tags=TAGS_METRICS | TAGS_DISCOVERY,
+    )
     async def metric_info(ctx: Context, metric_name: str) -> str:
         """Detailed metadata for a specific PCP metric.
 
@@ -79,7 +91,7 @@ search_metrics("{".".join(metric_name.split(".")[:2])}")
 ```
 """
 
-    @mcp.resource("pcp://metrics/common")
+    @mcp.resource("pcp://metrics/common", icons=[ICON_CATALOG], tags=TAGS_CATALOG)
     def common_metrics_catalog() -> str:
         """Catalog of commonly used metric groups.
 
@@ -158,7 +170,7 @@ search_metrics("{".".join(metric_name.split(".")[:2])}")
 (counter) = Cumulative counter since boot
 """
 
-    @mcp.resource("pcp://namespaces")
+    @mcp.resource("pcp://namespaces", icons=[ICON_NAMESPACE], tags=TAGS_DISCOVERY)
     async def metric_namespaces(ctx: Context) -> str:
         """List available PCP metric namespaces discovered from the live system.
 

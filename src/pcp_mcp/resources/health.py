@@ -9,6 +9,7 @@ from fastmcp import Context
 
 from pcp_mcp.client import PCPClient
 from pcp_mcp.context import get_client, get_client_for_host, get_settings
+from pcp_mcp.icons import ICON_HEALTH, TAGS_HEALTH
 from pcp_mcp.models import CPUMetrics, LoadMetrics, MemoryMetrics
 from pcp_mcp.tools.system import COUNTER_METRICS, SNAPSHOT_METRICS
 from pcp_mcp.utils.builders import (
@@ -74,7 +75,7 @@ async def _fetch_health_data(client: PCPClient) -> tuple[CPUMetrics, MemoryMetri
 def register_health_resources(mcp: FastMCP) -> None:
     """Register health resources with the MCP server."""
 
-    @mcp.resource("pcp://health")
+    @mcp.resource("pcp://health", icons=[ICON_HEALTH], tags=TAGS_HEALTH)
     async def health_summary(ctx: Context) -> str:
         """Quick system health summary for the default target host.
 
@@ -91,7 +92,7 @@ def register_health_resources(mcp: FastMCP) -> None:
 
         return _format_health_summary(client, cpu, memory, load)
 
-    @mcp.resource("pcp://host/{hostname}/health")
+    @mcp.resource("pcp://host/{hostname}/health", icons=[ICON_HEALTH], tags=TAGS_HEALTH)
     async def host_health_summary(ctx: Context, hostname: str) -> str:
         """System health summary for a specific host.
 
