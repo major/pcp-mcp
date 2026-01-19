@@ -147,7 +147,7 @@ async def _fetch_system_snapshot(
         return snapshot
 
 
-def register_system_tools(mcp: FastMCP) -> None:
+def register_system_tools(mcp: "FastMCP") -> None:
     """Register system health tools with the MCP server."""
 
     @mcp.tool(
