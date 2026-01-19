@@ -20,7 +20,8 @@ tests/
 ├── test_cli.py           # CLI argument tests
 ├── test_middleware.py    # Caching middleware tests
 ├── test_icons.py         # Icon mapping tests
-└── test_prompts.py       # Prompt tests
+├── test_prompts.py       # Prompt tests
+└── test_smoke.py         # Server startup smoke tests (catches registration errors)
 ```
 
 ## KEY FIXTURES
@@ -77,6 +78,17 @@ async def test_tool(self, mock_context, capture_tools):
     result = await tools["get_system_snapshot"](mock_context)
     assert result.cpu is not None
 ```
+
+### Smoke Testing (FastMCP Client)
+```python
+async def test_tools_are_registered(self):
+    server = create_server()
+    async with Client(server) as client:
+        tools = await client.list_tools()
+    assert {t.name for t in tools} >= {"get_system_snapshot", ...}
+```
+Uses FastMCP's in-process Client to verify server starts and tools register correctly.
+Catches import errors, type annotation issues, and registration failures.
 
 ## ANTI-PATTERNS
 
