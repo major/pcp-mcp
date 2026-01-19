@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastmcp import Context
+from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from pcp_mcp.context import get_client_for_host
@@ -12,11 +13,13 @@ from pcp_mcp.utils.extractors import extract_help_text, format_units
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
+TOOL_ANNOTATIONS = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
+
 
 def register_metrics_tools(mcp: "FastMCP") -> None:
     """Register core metric tools with the MCP server."""
 
-    @mcp.tool()
+    @mcp.tool(annotations=TOOL_ANNOTATIONS)
     async def query_metrics(
         ctx: Context,
         names: Annotated[
@@ -73,7 +76,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
 
             return results
 
-    @mcp.tool()
+    @mcp.tool(annotations=TOOL_ANNOTATIONS)
     async def search_metrics(
         ctx: Context,
         pattern: Annotated[
@@ -113,7 +116,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
                 for m in metrics
             ]
 
-    @mcp.tool()
+    @mcp.tool(annotations=TOOL_ANNOTATIONS)
     async def describe_metric(
         ctx: Context,
         name: Annotated[

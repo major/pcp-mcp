@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Literal, Optional
 
 from fastmcp import Context
+from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from pcp_mcp.context import get_client_for_host
@@ -24,6 +25,8 @@ from pcp_mcp.utils.extractors import get_scalar_value
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
+
+TOOL_ANNOTATIONS = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
 
 SNAPSHOT_METRICS = {
     "cpu": [
@@ -89,7 +92,7 @@ PROCESS_METRICS = {
 def register_system_tools(mcp: FastMCP) -> None:
     """Register system health tools with the MCP server."""
 
-    @mcp.tool()
+    @mcp.tool(annotations=TOOL_ANNOTATIONS)
     async def get_system_snapshot(
         ctx: Context,
         categories: Annotated[
@@ -178,7 +181,7 @@ def register_system_tools(mcp: FastMCP) -> None:
             await ctx.report_progress(100, 100, "Complete")
             return snapshot
 
-    @mcp.tool()
+    @mcp.tool(annotations=TOOL_ANNOTATIONS)
     async def get_process_top(
         ctx: Context,
         sort_by: Annotated[

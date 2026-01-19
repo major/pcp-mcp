@@ -267,7 +267,7 @@ def capture_tools() -> Callable[[RegisterFn], ToolDict]:
     def factory(register_fn: RegisterFn) -> ToolDict:
         tools: ToolDict = {}
 
-        def capture_tool():
+        def capture_tool(**_kwargs):
             def decorator(fn):
                 tools[fn.__name__] = fn
                 return fn
