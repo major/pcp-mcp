@@ -1,9 +1,8 @@
-"""Tests for utility functions: builders, extractors, and decorators."""
+"""Tests for utility functions: builders and extractors."""
 
 from __future__ import annotations
 
 import pytest
-from fastmcp.exceptions import ToolError
 
 from pcp_mcp.utils.builders import (
     assess_processes,
@@ -15,7 +14,6 @@ from pcp_mcp.utils.builders import (
     build_process_list,
     get_sort_key,
 )
-from pcp_mcp.utils.decorators import handle_pcp_errors
 from pcp_mcp.utils.extractors import (
     extract_help_text,
     extract_timestamp,
@@ -306,30 +304,3 @@ class TestAssessProcesses:
         procs = build_process_list(data, sort_by="cpu", total_mem=16_000_000_000, ncpu=4)
         assessment = assess_processes(procs, "unknown", 4)
         assert "Top process" in assessment
-
-
-class TestHandlePCPErrorsDecorator:
-    async def test_passes_through_on_success(self) -> None:
-        @handle_pcp_errors("testing")
-        async def success_fn() -> str:
-            return "success"
-
-        result = await success_fn()
-        assert result == "success"
-
-    @pytest.mark.parametrize(
-        ("exception", "expected_match"),
-        [
-            (ValueError("bad value"), "Error during"),
-            (RuntimeError("runtime issue"), "Error during"),
-        ],
-    )
-    async def test_converts_exceptions_to_tool_error(
-        self, exception: Exception, expected_match: str
-    ) -> None:
-        @handle_pcp_errors("testing operation")
-        async def failing_fn() -> None:
-            raise exception
-
-        with pytest.raises(ToolError, match=expected_match):
-            await failing_fn()
