@@ -4,6 +4,8 @@ MCP server for [Performance Co-Pilot (PCP)](https://pcp.io/) metrics.
 
 Query system performance metrics via the Model Context Protocol - CPU, memory, disk I/O, network, processes, and more.
 
+📖 **[Full Documentation](https://major.github.io/pcp-mcp)** | 🚀 **[Getting Started](https://major.github.io/pcp-mcp/getting-started/)**
+
 [![CI](https://github.com/major/pcp-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/major/pcp-mcp/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/major/pcp-mcp/branch/main/graph/badge.svg)](https://codecov.io/gh/major/pcp-mcp)
 [![PyPI version](https://badge.fury.io/py/pcp-mcp.svg)](https://pypi.org/project/pcp-mcp/)
@@ -144,9 +146,9 @@ For remote monitoring:
 
 Browse metrics via MCP resources:
 
-- `pcp://metrics` - List all available metrics (grouped by prefix)
-- `pcp://system/snapshot` - Latest system snapshot
-- `pcp://processes/top` - Top processes
+- `pcp://health` - Quick system health summary
+- `pcp://metrics/common` - Catalog of commonly used metrics
+- `pcp://namespaces` - Live-discovered metric namespaces
 
 ## 💡 Use Cases
 
