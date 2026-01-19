@@ -1,0 +1,10 @@
+coverage:
+  status:
+    project:
+      default:
+        # Allow coverage to drop by up to 1% without failing
+        # This prevents false failures when removing dead code
+        threshold: 1%
+    patch:
+      default:
+        target: 90%
