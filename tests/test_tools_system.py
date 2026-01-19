@@ -56,6 +56,24 @@ class TestGetSystemSnapshot:
         assert result.disk is None
         assert result.network is None
 
+    async def test_ignores_unknown_categories(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        cpu_metrics_data,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.return_value = cpu_metrics_data()
+
+        tools = capture_tools(register_system_tools)
+        result = await tools["get_system_snapshot"](
+            mock_context, categories=["cpu", "invalid_category", "also_invalid"]
+        )
+
+        assert result.cpu is not None
+        assert result.memory is None
+
     async def test_handles_error(
         self,
         mock_context: MagicMock,
@@ -340,6 +358,7 @@ class TestBuildFallbackDiagnosis:
             (80.0, 80.0, 1.0, 4, "warning"),
             (80.0, 95.0, 1.0, 4, "critical"),
             (80.0, 50.0, 12.0, 4, "critical"),
+            (80.0, 50.0, 6.0, 4, "warning"),  # load_per_cpu = 1.5, elevated but not critical
         ],
     )
     def test_severity_levels(
