@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 This project uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
 
+## v1.1.0 (2026-01-19)
+
+### Feat
+
+- add MCP registry support
+
+### Fix
+
+- **ci**: use cz directly after uv tool install
+
 ## v1.0.3 (2026-01-19)
 
 ### Fix
