@@ -17,6 +17,8 @@ Environment Variables:
   PCP_PORT          pmproxy port (default: 44322)
   PCP_TARGET_HOST   Target pmcd host to monitor (default: localhost)
   PCP_USE_TLS       Use HTTPS for pmproxy connection (default: false)
+  PCP_TLS_VERIFY    Verify TLS certificates (default: true)
+  PCP_TLS_CA_BUNDLE Path to custom CA bundle for TLS (optional)
   PCP_TIMEOUT       Request timeout in seconds (default: 30)
   PCP_USERNAME      HTTP basic auth user (optional)
   PCP_PASSWORD      HTTP basic auth password (optional)

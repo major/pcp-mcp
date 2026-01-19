@@ -24,6 +24,7 @@ class PCPClient:
         target_host: Which pmcd host to connect to (passed as hostspec).
         auth: Optional HTTP basic auth tuple (username, password).
         timeout: Request timeout in seconds.
+        verify: TLS verification (True, False, or path to CA bundle).
     """
 
     def __init__(
@@ -32,12 +33,14 @@ class PCPClient:
         target_host: str = "localhost",
         auth: tuple[str, str] | None = None,
         timeout: float = 30.0,
+        verify: bool | str = True,
     ) -> None:
         """Initialize the PCP client."""
         self._base_url = base_url
         self._target_host = target_host
         self._auth = auth
         self._timeout = timeout
+        self._verify = verify
         self._client: httpx.AsyncClient | None = None
         self._context_id: int | None = None
 
@@ -47,6 +50,7 @@ class PCPClient:
             base_url=self._base_url,
             auth=self._auth,
             timeout=self._timeout,
+            verify=self._verify,
         )
         resp = await self._client.get(
             "/pmapi/context",

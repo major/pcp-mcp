@@ -95,5 +95,6 @@ async def get_client_for_host(ctx: Context, host: str | None = None) -> AsyncIte
         target_host=host,
         auth=settings.auth,
         timeout=settings.timeout,
+        verify=settings.verify,
     ) as client:
         yield client
