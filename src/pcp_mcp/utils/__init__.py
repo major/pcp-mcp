@@ -2,7 +2,6 @@
 
 This package contains reusable utilities extracted to follow DRY principles:
 - extractors: Metric data extraction helpers
-- decorators: Error handling and other decorators
 - builders: Metric transformation and builder functions
 """
 
@@ -14,7 +13,6 @@ from pcp_mcp.utils.builders import (
     build_network_metrics,
     build_process_list,
 )
-from pcp_mcp.utils.decorators import handle_pcp_errors
 from pcp_mcp.utils.extractors import (
     extract_help_text,
     extract_timestamp,
@@ -30,8 +28,6 @@ __all__ = [
     "sum_instances",
     "extract_help_text",
     "extract_timestamp",
-    # Decorators
-    "handle_pcp_errors",
     # Builders
     "build_cpu_metrics",
     "build_memory_metrics",
