@@ -1,5 +1,7 @@
 """System health tools for clumped metric queries."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Literal, Optional
 
@@ -84,7 +86,7 @@ PROCESS_METRICS = {
 }
 
 
-def register_system_tools(mcp: "FastMCP") -> None:
+def register_system_tools(mcp: FastMCP) -> None:
     """Register system health tools with the MCP server."""
 
     @mcp.tool()
@@ -141,15 +143,21 @@ def register_system_tools(mcp: "FastMCP") -> None:
             if cat in SNAPSHOT_METRICS:
                 all_metrics.extend(SNAPSHOT_METRICS[cat])
 
+        async def report_progress(current: float, total: float, message: str) -> None:
+            await ctx.report_progress(current, total, message)
+
         async with get_client_for_host(ctx, host) as client:
             try:
                 data = await client.fetch_with_rates(
                     all_metrics,
                     COUNTER_METRICS,
                     sample_interval,
+                    progress_callback=report_progress,
                 )
             except Exception as e:
                 raise handle_pcp_error(e, "fetching system snapshot") from e
+
+            await ctx.report_progress(95, 100, "Building snapshot...")
 
             snapshot = SystemSnapshot(
                 timestamp=datetime.now(timezone.utc).isoformat(),
@@ -167,6 +175,7 @@ def register_system_tools(mcp: "FastMCP") -> None:
             if "network" in categories:
                 snapshot.network = build_network_metrics(data)
 
+            await ctx.report_progress(100, 100, "Complete")
             return snapshot
 
     @mcp.tool()
@@ -225,14 +234,19 @@ def register_system_tools(mcp: "FastMCP") -> None:
 
         from pcp_mcp.errors import handle_pcp_error
 
+        async def report_progress(current: float, total: float, message: str) -> None:
+            await ctx.report_progress(current, total, message)
+
         async with get_client_for_host(ctx, host) as client:
             try:
                 proc_data = await client.fetch_with_rates(
-                    all_metrics, counter_metrics, sample_interval
+                    all_metrics, counter_metrics, sample_interval, progress_callback=report_progress
                 )
                 sys_data = await client.fetch(system_metrics)
             except Exception as e:
                 raise handle_pcp_error(e, "fetching process data") from e
+
+            await ctx.report_progress(92, 100, "Processing results...")
 
             ncpu = get_scalar_value(sys_data, "hinv.ncpu", 1)
             total_mem = get_scalar_value(sys_data, "mem.physmem", 1) * 1024
@@ -243,6 +257,7 @@ def register_system_tools(mcp: "FastMCP") -> None:
 
             assessment = assess_processes(processes, sort_by, ncpu)
 
+            await ctx.report_progress(100, 100, "Complete")
             return ProcessTopResult(
                 timestamp=datetime.now(timezone.utc).isoformat(),
                 hostname=client.target_host,

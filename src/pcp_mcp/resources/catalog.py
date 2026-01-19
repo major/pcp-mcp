@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 from fastmcp import Context
 
+from pcp_mcp.utils.extractors import extract_help_text, format_units
+
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
@@ -16,6 +18,66 @@ def register_catalog_resources(mcp: FastMCP) -> None:
     Args:
         mcp: The FastMCP server instance.
     """
+
+    @mcp.resource("pcp://metric/{metric_name}/info")
+    async def metric_info(ctx: Context, metric_name: str) -> str:
+        """Detailed metadata for a specific PCP metric.
+
+        Returns type, semantics, units, and help text. Use to understand
+        what a metric measures and how to interpret its values.
+        """
+        from pcp_mcp.context import get_client
+        from pcp_mcp.errors import handle_pcp_error
+
+        client = get_client(ctx)
+
+        try:
+            info = await client.describe(metric_name)
+        except Exception as e:
+            raise handle_pcp_error(e, "describing metric") from e
+
+        if not info:
+            return f"# Metric Not Found\n\nNo metric named `{metric_name}` was found."
+
+        semantics = info.get("sem", "unknown")
+        metric_type = info.get("type", "unknown")
+        units = format_units(info)
+        help_text = extract_help_text(info) or "No description available."
+        indom = info.get("indom")
+
+        is_counter = semantics == "counter"
+        counter_warning = (
+            "\n\n> **Warning**: This is a counter metric (cumulative since boot). "
+            "Use `get_system_snapshot()` or `get_process_top()` for rate calculation."
+            if is_counter
+            else ""
+        )
+
+        instances_info = (
+            f"\n- **Instance Domain**: {indom} (has per-instance values)"
+            if indom and indom != "PM_INDOM_NULL"
+            else ""
+        )
+
+        return f"""# Metric: {metric_name}
+
+{help_text}{counter_warning}
+
+## Properties
+- **Type**: {metric_type}
+- **Semantics**: {semantics}
+- **Units**: {units}{instances_info}
+
+## Usage
+
+```python
+# Query current value
+query_metrics(["{metric_name}"])
+
+# Search related metrics
+search_metrics("{".".join(metric_name.split(".")[:2])}")
+```
+"""
 
     @mcp.resource("pcp://metrics/common")
     def common_metrics_catalog() -> str:

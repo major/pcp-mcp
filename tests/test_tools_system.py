@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, call
 
 import httpx
 import pytest
@@ -65,6 +65,24 @@ class TestGetSystemSnapshot:
         with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
             await tools["get_system_snapshot"](mock_context)
 
+    async def test_reports_progress(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        full_system_snapshot_data,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.return_value = full_system_snapshot_data()
+        mock_context.report_progress = AsyncMock()
+
+        tools = capture_tools(register_system_tools)
+        await tools["get_system_snapshot"](mock_context)
+
+        assert mock_context.report_progress.call_count >= 2
+        calls = mock_context.report_progress.call_args_list
+        assert calls[-1] == call(100, 100, "Complete")
+
 
 class TestGetProcessTop:
     @pytest.fixture
@@ -121,3 +139,27 @@ class TestGetProcessTop:
 
         with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
             await tools["get_process_top"](mock_context)
+
+    async def test_reports_progress(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        process_metrics_data,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.return_value = process_metrics_data()
+        mock_context.request_context.lifespan_context["client"].fetch.return_value = {
+            "values": [
+                {"name": "hinv.ncpu", "instances": [{"value": 4}]},
+                {"name": "mem.physmem", "instances": [{"value": 16000000}]},
+            ]
+        }
+        mock_context.report_progress = AsyncMock()
+
+        tools = capture_tools(register_system_tools)
+        await tools["get_process_top"](mock_context)
+
+        assert mock_context.report_progress.call_count >= 2
+        calls = mock_context.report_progress.call_args_list
+        assert calls[-1] == call(100, 100, "Complete")

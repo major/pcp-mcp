@@ -7,7 +7,7 @@ from pydantic import Field
 
 from pcp_mcp.context import get_client_for_host
 from pcp_mcp.models import MetricInfo, MetricSearchResult, MetricValue
-from pcp_mcp.utils.extractors import extract_help_text
+from pcp_mcp.utils.extractors import extract_help_text, format_units
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -153,25 +153,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
                 name=info.get("name", name),
                 type=info.get("type", "unknown"),
                 semantics=info.get("sem", "unknown"),
-                units=_format_units(info),
+                units=format_units(info),
                 help_text=extract_help_text(info),
                 indom=info.get("indom"),
             )
-
-
-def _format_units(info: dict) -> str:
-    """Format PCP units into a human-readable string."""
-    units = info.get("units", "")
-    if units:
-        return units
-
-    # Fallback: build from components if available
-    parts = []
-    if info.get("units-space"):
-        parts.append(info["units-space"])
-    if info.get("units-time"):
-        parts.append(info["units-time"])
-    if info.get("units-count"):
-        parts.append(info["units-count"])
-
-    return " / ".join(parts) if parts else "none"

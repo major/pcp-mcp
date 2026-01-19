@@ -258,6 +258,7 @@ def mock_context(mock_lifespan_context: dict[str, Any]) -> MagicMock:
     ctx = MagicMock(spec=Context)
     ctx.request_context = MagicMock()
     ctx.request_context.lifespan_context = mock_lifespan_context
+    ctx.report_progress = AsyncMock()
     return ctx
 
 
