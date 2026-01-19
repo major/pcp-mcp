@@ -107,7 +107,6 @@ typeCheckingMode = "standard"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
-build_command = "uv build"
 commit_parser = "conventional"
 
 [tool.semantic_release.commit_parser_options]
