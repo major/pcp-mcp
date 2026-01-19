@@ -287,7 +287,7 @@ def capture_resources() -> Callable[[RegisterFn], ResourceDict]:
     def factory(register_fn: RegisterFn) -> ResourceDict:
         resources: ResourceDict = {}
 
-        def capture_resource(uri: str):
+        def capture_resource(uri: str, **_kwargs):
             def decorator(fn):
                 resources[uri] = fn
                 return fn

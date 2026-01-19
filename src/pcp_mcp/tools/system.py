@@ -10,6 +10,7 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from pcp_mcp.context import get_client_for_host
+from pcp_mcp.icons import ICON_PROCESS, ICON_SYSTEM, TAGS_PROCESS, TAGS_SYSTEM
 from pcp_mcp.models import ProcessTopResult, SystemSnapshot
 from pcp_mcp.utils.builders import (
     assess_processes,
@@ -92,7 +93,12 @@ PROCESS_METRICS = {
 def register_system_tools(mcp: FastMCP) -> None:
     """Register system health tools with the MCP server."""
 
-    @mcp.tool(annotations=TOOL_ANNOTATIONS, output_schema=SystemSnapshot.model_json_schema())
+    @mcp.tool(
+        annotations=TOOL_ANNOTATIONS,
+        output_schema=SystemSnapshot.model_json_schema(),
+        icons=[ICON_SYSTEM],
+        tags=TAGS_SYSTEM,
+    )
     async def get_system_snapshot(
         ctx: Context,
         categories: Annotated[
@@ -181,7 +187,12 @@ def register_system_tools(mcp: FastMCP) -> None:
             await ctx.report_progress(100, 100, "Complete")
             return snapshot
 
-    @mcp.tool(annotations=TOOL_ANNOTATIONS, output_schema=ProcessTopResult.model_json_schema())
+    @mcp.tool(
+        annotations=TOOL_ANNOTATIONS,
+        output_schema=ProcessTopResult.model_json_schema(),
+        icons=[ICON_PROCESS],
+        tags=TAGS_PROCESS,
+    )
     async def get_process_top(
         ctx: Context,
         sort_by: Annotated[

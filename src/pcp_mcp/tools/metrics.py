@@ -7,6 +7,13 @@ from mcp.types import ToolAnnotations
 from pydantic import Field, TypeAdapter
 
 from pcp_mcp.context import get_client_for_host
+from pcp_mcp.icons import (
+    ICON_INFO,
+    ICON_METRICS,
+    ICON_SEARCH,
+    TAGS_DISCOVERY,
+    TAGS_METRICS,
+)
 from pcp_mcp.models import MetricInfo, MetricSearchResult, MetricValue
 from pcp_mcp.utils.extractors import extract_help_text, format_units
 
@@ -21,7 +28,12 @@ METRIC_SEARCH_LIST_SCHEMA = TypeAdapter(list[MetricSearchResult]).json_schema()
 def register_metrics_tools(mcp: "FastMCP") -> None:
     """Register core metric tools with the MCP server."""
 
-    @mcp.tool(annotations=TOOL_ANNOTATIONS, output_schema=METRIC_VALUE_LIST_SCHEMA)
+    @mcp.tool(
+        annotations=TOOL_ANNOTATIONS,
+        output_schema=METRIC_VALUE_LIST_SCHEMA,
+        icons=[ICON_METRICS],
+        tags=TAGS_METRICS,
+    )
     async def query_metrics(
         ctx: Context,
         names: Annotated[
@@ -78,7 +90,12 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
 
             return results
 
-    @mcp.tool(annotations=TOOL_ANNOTATIONS, output_schema=METRIC_SEARCH_LIST_SCHEMA)
+    @mcp.tool(
+        annotations=TOOL_ANNOTATIONS,
+        output_schema=METRIC_SEARCH_LIST_SCHEMA,
+        icons=[ICON_SEARCH],
+        tags=TAGS_METRICS | TAGS_DISCOVERY,
+    )
     async def search_metrics(
         ctx: Context,
         pattern: Annotated[
@@ -118,7 +135,12 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
                 for m in metrics
             ]
 
-    @mcp.tool(annotations=TOOL_ANNOTATIONS, output_schema=MetricInfo.model_json_schema())
+    @mcp.tool(
+        annotations=TOOL_ANNOTATIONS,
+        output_schema=MetricInfo.model_json_schema(),
+        icons=[ICON_INFO],
+        tags=TAGS_METRICS | TAGS_DISCOVERY,
+    )
     async def describe_metric(
         ctx: Context,
         name: Annotated[
