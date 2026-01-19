@@ -51,6 +51,7 @@ dev = [
     "pytest-randomly>=4.0.1",
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.27",
+    "commitizen>=4.0",
 ]
 
 [tool.uv.build-backend]
@@ -105,33 +106,11 @@ venvPath = "."
 venv = ".venv"
 typeCheckingMode = "standard"
 
-[tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-commit_parser = "conventional"
-
-[tool.semantic_release.commit_parser_options]
-minor_tags = ["feat"]
-patch_tags = ["fix", "perf"]
-
-[tool.semantic_release.changelog]
-mode = "update"
-exclude_commit_patterns = [
-    '''chore(?:\([^)]*?\))?: .+''',
-    '''ci(?:\([^)]*?\))?: .+''',
-    '''refactor(?:\([^)]*?\))?: .+''',
-    '''style(?:\([^)]*?\))?: .+''',
-    '''test(?:\([^)]*?\))?: .+''',
-    '''docs(?:\([^)]*?\))?: .+''',
-]
-
-[tool.semantic_release.changelog.default_templates]
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "pep621"
+tag_format = "v$version"
+update_changelog_on_bump = true
 changelog_file = "CHANGELOG.md"
-output_format = "md"
-
-[tool.semantic_release.remote]
-type = "github"
-token = { env = "GH_TOKEN" }
-
-[tool.semantic_release.branches.main]
-match = "main"
-prerelease = false
+changelog_incremental = true
+bump_message = "bump: version $current_version → $new_version"
