@@ -110,6 +110,22 @@ class TestSearchMetrics:
 
         assert result == []
 
+    async def test_search_metrics_raises_on_error(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
+        import httpx
+
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].search.side_effect = httpx.ConnectError("Connection refused")
+
+        tools = capture_tools(register_metrics_tools)
+
+        with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
+            await tools["search_metrics"](mock_context, pattern="kernel")
+
 
 class TestDescribeMetric:
     async def test_describe_metric_returns_info(
@@ -176,3 +192,19 @@ class TestDescribeMetric:
         result = await tools["describe_metric"](mock_context, name="test.metric")
 
         assert result.units == expected_units
+
+    async def test_describe_metric_raises_on_error(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+    ) -> None:
+        import httpx
+
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].describe.side_effect = httpx.ConnectError("Connection refused")
+
+        tools = capture_tools(register_metrics_tools)
+
+        with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
+            await tools["describe_metric"](mock_context, name="kernel.all.load")
