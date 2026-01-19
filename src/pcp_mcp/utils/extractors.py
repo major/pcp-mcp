@@ -51,10 +51,28 @@ def extract_timestamp(response: dict) -> float:
     return float(ts)
 
 
+def format_units(info: dict) -> str:
+    """Format PCP units into a human-readable string."""
+    units = info.get("units", "")
+    if units:
+        return units
+
+    parts = []
+    if info.get("units-space"):
+        parts.append(info["units-space"])
+    if info.get("units-time"):
+        parts.append(info["units-time"])
+    if info.get("units-count"):
+        parts.append(info["units-count"])
+
+    return " / ".join(parts) if parts else "none"
+
+
 __all__ = [
     "get_first_value",
     "get_scalar_value",
     "sum_instances",
     "extract_help_text",
     "extract_timestamp",
+    "format_units",
 ]

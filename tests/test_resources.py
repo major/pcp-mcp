@@ -51,6 +51,99 @@ class TestHealthResource:
         assert "Connection failed" in result
 
 
+class TestHostHealthResource:
+    async def test_returns_health_for_allowed_host(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+        full_system_snapshot_data,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.return_value = full_system_snapshot_data()
+
+        resources = capture_resources(register_health_resources)
+        result = await resources["pcp://host/{hostname}/health"](mock_context, hostname="localhost")
+
+        assert "System Health Summary" in result
+        assert "CPU" in result
+        assert "Memory" in result
+
+    async def test_rejects_disallowed_host(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
+        resources = capture_resources(register_health_resources)
+        result = await resources["pcp://host/{hostname}/health"](
+            mock_context, hostname="forbidden.host"
+        )
+
+        assert "Error" in result
+        assert "not allowed" in result
+
+
+class TestMetricInfoResource:
+    async def test_returns_metric_info(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
+        mock_context.request_context.lifespan_context["client"].describe.return_value = {
+            "name": "kernel.all.load",
+            "text-help": "Load averages for 1, 5, and 15 minutes",
+            "sem": "instant",
+            "type": "float",
+            "units": "none",
+        }
+
+        resources = capture_resources(register_catalog_resources)
+        result = await resources["pcp://metric/{metric_name}/info"](
+            mock_context, metric_name="kernel.all.load"
+        )
+
+        assert "kernel.all.load" in result
+        assert "Load averages" in result
+        assert "instant" in result
+
+    async def test_returns_counter_warning(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
+        mock_context.request_context.lifespan_context["client"].describe.return_value = {
+            "name": "disk.all.read_bytes",
+            "text-help": "Total bytes read from all disks",
+            "sem": "counter",
+            "type": "u64",
+            "units": "byte",
+        }
+
+        resources = capture_resources(register_catalog_resources)
+        result = await resources["pcp://metric/{metric_name}/info"](
+            mock_context, metric_name="disk.all.read_bytes"
+        )
+
+        assert "Warning" in result
+        assert "counter" in result.lower()
+        assert "get_system_snapshot" in result
+
+    async def test_handles_metric_not_found(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
+        mock_context.request_context.lifespan_context["client"].describe.return_value = {}
+
+        resources = capture_resources(register_catalog_resources)
+        result = await resources["pcp://metric/{metric_name}/info"](
+            mock_context, metric_name="nonexistent.metric"
+        )
+
+        assert "Not Found" in result
+        assert "nonexistent.metric" in result
+
+
 class TestCommonMetricsCatalog:
     @pytest.mark.parametrize(
         "expected_content",

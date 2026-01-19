@@ -109,6 +109,8 @@ Tools:
 
 Resources:
 - pcp://health - Quick system health summary
+- pcp://host/{{hostname}}/health - Per-host health summary (template)
+- pcp://metric/{{name}}/info - Detailed metric metadata (template)
 - pcp://metrics/common - Catalog of commonly used metrics
 - pcp://namespaces - Dynamically discovered metric namespaces
 
