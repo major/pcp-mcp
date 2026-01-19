@@ -226,3 +226,5 @@ Full documentation at [https://major.github.io/pcp-mcp](https://major.github.io/
 ## 📄 License
 
 MIT
+
+<!-- mcp-name: io.github.major/pcp -->
