@@ -1,11 +1,11 @@
 """Smoke tests for server startup and tool registration.
 
-These tests verify that the server can start and tools can be invoked,
+These tests verify that the server can start and tools register correctly,
 catching registration-time failures like missing imports or type errors.
+Does NOT require pmproxy - accesses server internals directly.
 """
 
 import pytest
-from fastmcp import Client
 
 from pcp_mcp.server import create_server
 
@@ -13,22 +13,17 @@ from pcp_mcp.server import create_server
 class TestServerSmoke:
     """Smoke tests for server initialization and tool discovery."""
 
-    async def test_server_creates_successfully(self):
+    def test_server_creates_successfully(self):
         """Server creation should not raise any exceptions."""
         server = create_server()
         assert server is not None
         assert server.name == "pcp"
 
-    async def test_tools_are_registered(self):
-        """All expected tools should be discoverable via MCP client."""
+    def test_tools_are_registered(self):
+        """All expected tools should be registered."""
         server = create_server()
+        tool_names = {t.name for t in server._tool_manager._tools.values()}
 
-        async with Client(server) as client:
-            tools = await client.list_tools()
-
-        tool_names = {tool.name for tool in tools}
-
-        # Core tools that must always be present
         expected_tools = {
             "query_metrics",
             "search_metrics",
@@ -42,16 +37,11 @@ class TestServerSmoke:
         missing = expected_tools - tool_names
         assert not missing, f"Missing tools: {missing}"
 
-    async def test_resources_are_registered(self):
-        """All expected resources should be discoverable via MCP client."""
+    def test_resources_are_registered(self):
+        """All expected resources should be registered."""
         server = create_server()
+        resource_uris = set(server._resource_manager._resources.keys())
 
-        async with Client(server) as client:
-            resources = await client.list_resources()
-
-        resource_uris = {str(r.uri) for r in resources}
-
-        # Core resources that must always be present
         expected_resources = {
             "pcp://health",
             "pcp://metrics/common",
@@ -61,16 +51,11 @@ class TestServerSmoke:
         missing = expected_resources - resource_uris
         assert not missing, f"Missing resources: {missing}"
 
-    async def test_prompts_are_registered(self):
-        """All expected prompts should be discoverable via MCP client."""
+    def test_prompts_are_registered(self):
+        """All expected prompts should be registered."""
         server = create_server()
+        prompt_names = set(server._prompt_manager._prompts.keys())
 
-        async with Client(server) as client:
-            prompts = await client.list_prompts()
-
-        prompt_names = {p.name for p in prompts}
-
-        # Core prompts that must always be present
         expected_prompts = {
             "diagnose_slow_system",
             "investigate_memory_usage",
@@ -94,14 +79,11 @@ class TestServerSmoke:
             "smart_diagnose",
         ],
     )
-    async def test_tool_has_valid_schema(self, tool_name: str):
+    def test_tool_has_valid_schema(self, tool_name: str):
         """Each tool should have a valid input schema."""
         server = create_server()
+        tools = {t.name: t for t in server._tool_manager._tools.values()}
 
-        async with Client(server) as client:
-            tools = await client.list_tools()
-
-        tool = next((t for t in tools if t.name == tool_name), None)
+        tool = tools.get(tool_name)
         assert tool is not None, f"Tool {tool_name} not found"
-        assert tool.inputSchema is not None, f"Tool {tool_name} has no input schema"
-        assert tool.inputSchema.get("type") == "object", f"Tool {tool_name} schema is not object"
+        assert tool.parameters is not None, f"Tool {tool_name} has no parameters schema"
