@@ -11,6 +11,7 @@ from fastmcp.server.middleware.logging import StructuredLoggingMiddleware
 
 from pcp_mcp.client import PCPClient
 from pcp_mcp.config import PCPMCPSettings
+from pcp_mcp.middleware import MetricCacheMiddleware
 
 
 @asynccontextmanager
@@ -130,6 +131,7 @@ Prompts (invoke for guided troubleshooting workflows):
             estimate_payload_tokens=True,
         )
     )
+    mcp.add_middleware(MetricCacheMiddleware())
 
     from pcp_mcp.prompts import register_prompts
     from pcp_mcp.resources import register_resources
