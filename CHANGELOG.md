@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 This project uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
 
+## v1.0.3 (2026-01-19)
+
+### Fix
+
+- make smoke tests work without pmproxy connection
+- use quoted forward reference for FastMCP type hint
+- remove future annotations import for Python 3.14 compatibility
+
 ## v1.0.2 (2026-01-19)
 
 ### Fix
