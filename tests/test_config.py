@@ -20,6 +20,18 @@ def test_default_settings() -> None:
     assert settings.password is None
 
 
+def test_computed_fields_in_model_dump() -> None:
+    settings = PCPMCPSettings(host="example.com", port=8080, username="user", password="pass")
+    dumped = settings.model_dump()
+
+    assert "base_url" in dumped
+    assert dumped["base_url"] == "http://example.com:8080"
+    assert "auth" in dumped
+    assert dumped["auth"] == ("user", "pass")
+    assert "verify" in dumped
+    assert dumped["verify"] is True
+
+
 @pytest.mark.parametrize(
     ("host", "port", "use_tls", "expected_url"),
     [
