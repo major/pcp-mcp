@@ -116,30 +116,25 @@ class TestGetClientForHost:
             async with get_client_for_host(mock_context, host="attacker.example.com"):
                 pass
 
-    async def test_allows_host_in_allowlist(self, mock_context: MagicMock) -> None:
-        mock_context.request_context.lifespan_context["settings"].allowed_hosts = [
-            "permitted.example.com"
-        ]
+    @pytest.mark.parametrize(
+        ("allowed_hosts", "query_host"),
+        [
+            (["permitted.example.com"], "permitted.example.com"),
+            (["*"], "any.host.com"),
+        ],
+        ids=["explicit_allowlist", "wildcard"],
+    )
+    async def test_allows_host_when_in_allowlist(
+        self, mock_context: MagicMock, allowed_hosts: list[str], query_host: str
+    ) -> None:
+        mock_context.request_context.lifespan_context["settings"].allowed_hosts = allowed_hosts
 
         mock_client_instance = AsyncMock()
-        mock_client_instance.target_host = "permitted.example.com"
+        mock_client_instance.target_host = query_host
         mock_client_instance.__aenter__.return_value = mock_client_instance
 
         with patch("pcp_mcp.context.PCPClient") as mock_pcp_client:
             mock_pcp_client.return_value = mock_client_instance
 
-            async with get_client_for_host(mock_context, host="permitted.example.com") as client:
-                assert client is mock_client_instance
-
-    async def test_allows_any_host_with_wildcard(self, mock_context: MagicMock) -> None:
-        mock_context.request_context.lifespan_context["settings"].allowed_hosts = ["*"]
-
-        mock_client_instance = AsyncMock()
-        mock_client_instance.target_host = "any.host.com"
-        mock_client_instance.__aenter__.return_value = mock_client_instance
-
-        with patch("pcp_mcp.context.PCPClient") as mock_pcp_client:
-            mock_pcp_client.return_value = mock_client_instance
-
-            async with get_client_for_host(mock_context, host="any.host.com") as client:
+            async with get_client_for_host(mock_context, host=query_host) as client:
                 assert client is mock_client_instance

@@ -58,42 +58,34 @@ def test_default_allowed_hosts_is_none() -> None:
     assert settings.allowed_hosts is None
 
 
-class TestIsHostAllowed:
-    def test_target_host_always_allowed(self) -> None:
-        settings = PCPMCPSettings(target_host="myhost.example.com")
-        assert settings.is_host_allowed("myhost.example.com") is True
-
-    def test_other_host_denied_when_allowlist_is_none(self) -> None:
-        settings = PCPMCPSettings(target_host="localhost")
-        assert settings.is_host_allowed("attacker.example.com") is False
-
-    def test_allowlisted_host_permitted(self) -> None:
-        settings = PCPMCPSettings(
-            target_host="localhost",
-            allowed_hosts=["web1.example.com", "db1.example.com"],
-        )
-        assert settings.is_host_allowed("web1.example.com") is True
-        assert settings.is_host_allowed("db1.example.com") is True
-
-    def test_non_allowlisted_host_denied(self) -> None:
-        settings = PCPMCPSettings(
-            target_host="localhost",
-            allowed_hosts=["web1.example.com"],
-        )
-        assert settings.is_host_allowed("attacker.example.com") is False
-
-    def test_wildcard_allows_any_host(self) -> None:
-        settings = PCPMCPSettings(
-            target_host="localhost",
-            allowed_hosts=["*"],
-        )
-        assert settings.is_host_allowed("any.host.anywhere.com") is True
-        assert settings.is_host_allowed("192.168.1.1") is True
-
-    def test_empty_allowlist_denies_all_except_target(self) -> None:
-        settings = PCPMCPSettings(
-            target_host="localhost",
-            allowed_hosts=[],
-        )
-        assert settings.is_host_allowed("localhost") is True
-        assert settings.is_host_allowed("other.host.com") is False
+@pytest.mark.parametrize(
+    ("target_host", "allowed_hosts", "query_host", "expected"),
+    [
+        ("myhost.example.com", None, "myhost.example.com", True),
+        ("localhost", None, "attacker.example.com", False),
+        ("localhost", ["web1.example.com"], "web1.example.com", True),
+        ("localhost", ["web1.example.com"], "attacker.example.com", False),
+        ("localhost", ["*"], "any.host.anywhere.com", True),
+        ("localhost", ["*"], "192.168.1.1", True),
+        ("localhost", [], "localhost", True),
+        ("localhost", [], "other.host.com", False),
+    ],
+    ids=[
+        "target_host_always_allowed",
+        "deny_when_allowlist_none",
+        "allowlisted_host_permitted",
+        "non_allowlisted_host_denied",
+        "wildcard_allows_any_host",
+        "wildcard_allows_ip",
+        "empty_allowlist_permits_target",
+        "empty_allowlist_denies_other",
+    ],
+)
+def test_is_host_allowed(
+    target_host: str,
+    allowed_hosts: list[str] | None,
+    query_host: str,
+    expected: bool,
+) -> None:
+    settings = PCPMCPSettings(target_host=target_host, allowed_hosts=allowed_hosts)
+    assert settings.is_host_allowed(query_host) is expected
