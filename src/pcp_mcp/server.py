@@ -32,6 +32,7 @@ async def lifespan(mcp: FastMCP) -> AsyncIterator[dict[str, Any]]:
         target_host=settings.target_host,
         auth=settings.auth,
         timeout=settings.timeout,
+        verify=settings.verify,
     ) as client:
         yield {
             "client": client,

@@ -13,6 +13,8 @@ def test_default_settings() -> None:
     assert settings.port == 44322
     assert settings.target_host == "localhost"
     assert settings.use_tls is False
+    assert settings.tls_verify is True
+    assert settings.tls_ca_bundle is None
     assert settings.timeout == 30.0
     assert settings.username is None
     assert settings.password is None
@@ -56,6 +58,30 @@ def test_auth_combinations(
 def test_default_allowed_hosts_is_none() -> None:
     settings = PCPMCPSettings()
     assert settings.allowed_hosts is None
+
+
+@pytest.mark.parametrize(
+    ("tls_verify", "tls_ca_bundle", "expected"),
+    [
+        (True, None, True),
+        (False, None, False),
+        (True, "/path/to/ca-bundle.crt", "/path/to/ca-bundle.crt"),
+        (False, "/path/to/ca-bundle.crt", False),
+    ],
+    ids=[
+        "verify_enabled_default_ca",
+        "verify_disabled",
+        "verify_with_custom_ca",
+        "verify_disabled_ignores_ca_bundle",
+    ],
+)
+def test_verify_property(
+    tls_verify: bool,
+    tls_ca_bundle: str | None,
+    expected: bool | str,
+) -> None:
+    settings = PCPMCPSettings(tls_verify=tls_verify, tls_ca_bundle=tls_ca_bundle)
+    assert settings.verify == expected
 
 
 @pytest.mark.parametrize(

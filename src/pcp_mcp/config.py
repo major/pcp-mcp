@@ -28,6 +28,14 @@ class PCPMCPSettings(BaseSettings):
     host: str = Field(default="localhost", description="pmproxy host")
     port: int = Field(default=44322, description="pmproxy port")
     use_tls: bool = Field(default=False, description="Use HTTPS for pmproxy connection")
+    tls_verify: bool = Field(
+        default=True,
+        description="Verify TLS certificates when use_tls is enabled",
+    )
+    tls_ca_bundle: str | None = Field(
+        default=None,
+        description="Path to custom CA bundle for TLS verification",
+    )
     timeout: float = Field(default=30.0, description="Request timeout in seconds")
     target_host: str = Field(
         default="localhost",
@@ -56,6 +64,20 @@ class PCPMCPSettings(BaseSettings):
         if self.username and self.password:
             return (self.username, self.password)
         return None
+
+    @property
+    def verify(self) -> bool | str:
+        """TLS verification setting for httpx.
+
+        Returns:
+            False if verification disabled, path to CA bundle if specified,
+            or True for default system verification.
+        """
+        if not self.tls_verify:
+            return False
+        if self.tls_ca_bundle:
+            return self.tls_ca_bundle
+        return True
 
     def is_host_allowed(self, host: str) -> bool:
         """Check if a host is allowed by the allowlist.

@@ -46,9 +46,12 @@ Configure via environment variables:
 | `PCP_PORT` | pmproxy port | `44322` |
 | `PCP_TARGET_HOST` | Target pmcd host to monitor | `localhost` |
 | `PCP_USE_TLS` | Use HTTPS for pmproxy | `false` |
+| `PCP_TLS_VERIFY` | Verify TLS certificates | `true` |
+| `PCP_TLS_CA_BUNDLE` | Path to custom CA bundle | (optional) |
 | `PCP_TIMEOUT` | Request timeout (seconds) | `30` |
 | `PCP_USERNAME` | HTTP basic auth user | (optional) |
 | `PCP_PASSWORD` | HTTP basic auth password | (optional) |
+| `PCP_ALLOWED_HOSTS` | Hostspecs allowed via host param | (optional) |
 
 ## 🎯 Usage
 

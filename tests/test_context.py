@@ -96,6 +96,7 @@ class TestGetClientForHost:
                     target_host="remote.example.com",
                     auth=settings.auth,
                     timeout=settings.timeout,
+                    verify=settings.verify,
                 )
 
     async def test_aenter_failure_propagates(self, mock_context: MagicMock) -> None:
