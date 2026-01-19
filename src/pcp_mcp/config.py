@@ -35,6 +35,14 @@ class PCPMCPSettings(BaseSettings):
     )
     username: str | None = Field(default=None, description="HTTP basic auth user")
     password: str | None = Field(default=None, description="HTTP basic auth password")
+    allowed_hosts: list[str] | None = Field(
+        default=None,
+        description=(
+            "Allowlist of hostspecs that can be queried via the host parameter. "
+            "If None, only the configured target_host is allowed (default). "
+            "Set to ['*'] to allow any host (use with caution)."
+        ),
+    )
 
     @property
     def base_url(self) -> str:
@@ -48,3 +56,27 @@ class PCPMCPSettings(BaseSettings):
         if self.username and self.password:
             return (self.username, self.password)
         return None
+
+    def is_host_allowed(self, host: str) -> bool:
+        """Check if a host is allowed by the allowlist.
+
+        Args:
+            host: The hostspec to validate.
+
+        Returns:
+            True if the host is allowed, False otherwise.
+        """
+        # Always allow the configured target_host
+        if host == self.target_host:
+            return True
+
+        # If no allowlist configured, only target_host is allowed
+        if self.allowed_hosts is None:
+            return False
+
+        # Wildcard allows everything
+        if "*" in self.allowed_hosts:
+            return True
+
+        # Check exact match in allowlist
+        return host in self.allowed_hosts

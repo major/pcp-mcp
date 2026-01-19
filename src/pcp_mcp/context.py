@@ -76,13 +76,19 @@ async def get_client_for_host(ctx: Context, host: str | None = None) -> AsyncIte
         PCPClient connected to the specified host.
 
     Raises:
-        ToolError: If context is not available or host is unreachable.
+        ToolError: If context is not available, host is not allowed, or host is unreachable.
     """
     settings = get_settings(ctx)
 
     if host is None or host == settings.target_host:
         yield get_client(ctx)
         return
+
+    if not settings.is_host_allowed(host):
+        raise ToolError(
+            f"Host '{host}' is not in the allowed hosts list. "
+            f"Configure PCP_ALLOWED_HOSTS to permit additional hosts."
+        )
 
     async with PCPClient(
         base_url=settings.base_url,

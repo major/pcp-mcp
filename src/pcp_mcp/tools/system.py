@@ -84,7 +84,7 @@ PROCESS_METRICS = {
 }
 
 
-def register_system_tools(mcp: FastMCP) -> None:
+def register_system_tools(mcp: "FastMCP") -> None:
     """Register system health tools with the MCP server."""
 
     @mcp.tool()

@@ -65,6 +65,10 @@ class TestGetClientForHost:
             assert client is mock_context.request_context.lifespan_context["client"]
 
     async def test_creates_new_client_for_different_host(self, mock_context: MagicMock) -> None:
+        mock_context.request_context.lifespan_context["settings"].allowed_hosts = [
+            "remote.example.com"
+        ]
+
         mock_client_instance = AsyncMock()
         mock_client_instance.target_host = "remote.example.com"
         mock_client_instance.__aenter__.return_value = mock_client_instance
@@ -81,6 +85,7 @@ class TestGetClientForHost:
     async def test_new_client_uses_settings_from_context(self, mock_context: MagicMock) -> None:
         mock_client_instance = AsyncMock()
         settings = mock_context.request_context.lifespan_context["settings"]
+        settings.allowed_hosts = ["remote.example.com"]
 
         with patch("pcp_mcp.context.PCPClient") as mock_pcp_client:
             mock_pcp_client.return_value = mock_client_instance
@@ -97,9 +102,39 @@ class TestGetClientForHost:
         mock_client_instance = AsyncMock()
         mock_client_instance.__aenter__.side_effect = ConnectionError("Connection refused")
 
+        mock_context.request_context.lifespan_context["settings"].allowed_hosts = ["*"]
+
         with patch("pcp_mcp.context.PCPClient") as mock_pcp_client:
             mock_pcp_client.return_value = mock_client_instance
 
             with pytest.raises(ConnectionError, match="Connection refused"):
                 async with get_client_for_host(mock_context, host="unreachable.example.com"):
                     pass
+
+    async def test_rejects_host_not_in_allowlist(self, mock_context: MagicMock) -> None:
+        with pytest.raises(ToolError, match="not in the allowed hosts list"):
+            async with get_client_for_host(mock_context, host="attacker.example.com"):
+                pass
+
+    @pytest.mark.parametrize(
+        ("allowed_hosts", "query_host"),
+        [
+            (["permitted.example.com"], "permitted.example.com"),
+            (["*"], "any.host.com"),
+        ],
+        ids=["explicit_allowlist", "wildcard"],
+    )
+    async def test_allows_host_when_in_allowlist(
+        self, mock_context: MagicMock, allowed_hosts: list[str], query_host: str
+    ) -> None:
+        mock_context.request_context.lifespan_context["settings"].allowed_hosts = allowed_hosts
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.target_host = query_host
+        mock_client_instance.__aenter__.return_value = mock_client_instance
+
+        with patch("pcp_mcp.context.PCPClient") as mock_pcp_client:
+            mock_pcp_client.return_value = mock_client_instance
+
+            async with get_client_for_host(mock_context, host=query_host) as client:
+                assert client is mock_client_instance

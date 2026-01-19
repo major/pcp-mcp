@@ -51,3 +51,41 @@ def test_auth_combinations(
 ) -> None:
     settings = PCPMCPSettings(username=username, password=password)
     assert settings.auth == expected_auth
+
+
+def test_default_allowed_hosts_is_none() -> None:
+    settings = PCPMCPSettings()
+    assert settings.allowed_hosts is None
+
+
+@pytest.mark.parametrize(
+    ("target_host", "allowed_hosts", "query_host", "expected"),
+    [
+        ("myhost.example.com", None, "myhost.example.com", True),
+        ("localhost", None, "attacker.example.com", False),
+        ("localhost", ["web1.example.com"], "web1.example.com", True),
+        ("localhost", ["web1.example.com"], "attacker.example.com", False),
+        ("localhost", ["*"], "any.host.anywhere.com", True),
+        ("localhost", ["*"], "192.168.1.1", True),
+        ("localhost", [], "localhost", True),
+        ("localhost", [], "other.host.com", False),
+    ],
+    ids=[
+        "target_host_always_allowed",
+        "deny_when_allowlist_none",
+        "allowlisted_host_permitted",
+        "non_allowlisted_host_denied",
+        "wildcard_allows_any_host",
+        "wildcard_allows_ip",
+        "empty_allowlist_permits_target",
+        "empty_allowlist_denies_other",
+    ],
+)
+def test_is_host_allowed(
+    target_host: str,
+    allowed_hosts: list[str] | None,
+    query_host: str,
+    expected: bool,
+) -> None:
+    settings = PCPMCPSettings(target_host=target_host, allowed_hosts=allowed_hosts)
+    assert settings.is_host_allowed(query_host) is expected
