@@ -12,7 +12,22 @@ Query system performance metrics via the Model Context Protocol - CPU, memory, d
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 Installation
+## 🚀 Quick Start (No Install)
+
+Run immediately with [uvx](https://docs.astral.sh/uv/) — no installation required:
+
+```bash
+uvx pcp-mcp
+```
+
+Or install as a persistent global tool:
+
+```bash
+uvx tool install pcp-mcp
+pcp-mcp
+```
+
+## 📦 Installation
 
 ```bash
 pip install pcp-mcp
@@ -97,7 +112,8 @@ Add to `~/.config/claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "pcp": {
-      "command": "pcp-mcp"
+      "command": "uvx",
+      "args": ["pcp-mcp"]
     }
   }
 }
@@ -109,12 +125,14 @@ For remote monitoring:
 {
   "mcpServers": {
     "pcp": {
-      "command": "pcp-mcp",
-      "args": ["--target-host", "webserver1.example.com"]
+      "command": "uvx",
+      "args": ["pcp-mcp", "--target-host", "webserver1.example.com"]
     }
   }
 }
 ```
+
+> 💡 Using `uvx` means you don't need pcp-mcp installed — it runs directly from PyPI.
 
 ## 🛠️ Available Tools
 

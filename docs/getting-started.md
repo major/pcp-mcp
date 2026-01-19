@@ -2,15 +2,28 @@
 
 ## Installation
 
-### Install pcp-mcp
+### Quick Start (No Install)
 
-Install from PyPI:
+Run immediately with [uvx](https://docs.astral.sh/uv/) — no installation required:
+
+```bash
+uvx pcp-mcp
+```
+
+Or install as a persistent global tool:
+
+```bash
+uvx tool install pcp-mcp
+pcp-mcp
+```
+
+### Install from PyPI
 
 ```bash
 pip install pcp-mcp
 ```
 
-Or with [uv](https://docs.astral.sh/uv/):
+Or add to a project with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv add pcp-mcp
@@ -95,7 +108,8 @@ Add to `~/.config/claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "pcp": {
-      "command": "pcp-mcp"
+      "command": "uvx",
+      "args": ["pcp-mcp"]
     }
   }
 }
@@ -107,12 +121,16 @@ For remote monitoring:
 {
   "mcpServers": {
     "pcp": {
-      "command": "pcp-mcp",
-      "args": ["--target-host", "webserver1.example.com"]
+      "command": "uvx",
+      "args": ["pcp-mcp", "--target-host", "webserver1.example.com"]
     }
   }
 }
 ```
+
+!!! tip "Why uvx?"
+    Using `uvx` means you don't need pcp-mcp installed — it runs directly from PyPI.
+    This avoids PATH issues and keeps your system clean.
 
 Restart Claude Desktop to load the server.
 
