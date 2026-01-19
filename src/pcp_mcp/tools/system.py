@@ -92,7 +92,7 @@ PROCESS_METRICS = {
 def register_system_tools(mcp: FastMCP) -> None:
     """Register system health tools with the MCP server."""
 
-    @mcp.tool(annotations=TOOL_ANNOTATIONS)
+    @mcp.tool(annotations=TOOL_ANNOTATIONS, output_schema=SystemSnapshot.model_json_schema())
     async def get_system_snapshot(
         ctx: Context,
         categories: Annotated[
@@ -181,7 +181,7 @@ def register_system_tools(mcp: FastMCP) -> None:
             await ctx.report_progress(100, 100, "Complete")
             return snapshot
 
-    @mcp.tool(annotations=TOOL_ANNOTATIONS)
+    @mcp.tool(annotations=TOOL_ANNOTATIONS, output_schema=ProcessTopResult.model_json_schema())
     async def get_process_top(
         ctx: Context,
         sort_by: Annotated[
