@@ -41,6 +41,8 @@ def get_client(ctx: Context) -> PCPClient:
         ToolError: If context is not available.
     """
     _validate_context(ctx)
+    assert ctx.request_context is not None
+    assert ctx.request_context.lifespan_context is not None
     return ctx.request_context.lifespan_context["client"]
 
 
@@ -57,6 +59,8 @@ def get_settings(ctx: Context) -> PCPMCPSettings:
         ToolError: If context is not available.
     """
     _validate_context(ctx)
+    assert ctx.request_context is not None
+    assert ctx.request_context.lifespan_context is not None
     return ctx.request_context.lifespan_context["settings"]
 
 
