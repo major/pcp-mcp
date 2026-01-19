@@ -84,6 +84,50 @@ class TestGetSystemSnapshot:
         assert calls[-1] == call(100, 100, "Complete")
 
 
+class TestQuickHealth:
+    async def test_returns_only_cpu_and_memory(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        cpu_metrics_data,
+        memory_metrics_data,
+    ) -> None:
+        combined_data = {**cpu_metrics_data(), **memory_metrics_data()}
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.return_value = combined_data
+
+        tools = capture_tools(register_system_tools)
+        result = await tools["quick_health"](mock_context)
+
+        assert result.cpu is not None
+        assert result.memory is not None
+        assert result.load is None
+        assert result.disk is None
+        assert result.network is None
+
+    async def test_uses_shorter_sample_interval(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        cpu_metrics_data,
+        memory_metrics_data,
+    ) -> None:
+        combined_data = {**cpu_metrics_data(), **memory_metrics_data()}
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.return_value = combined_data
+
+        tools = capture_tools(register_system_tools)
+        await tools["quick_health"](mock_context)
+
+        call_args = mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.call_args
+        sample_interval_arg = call_args[0][2]
+        assert sample_interval_arg == 0.5
+
+
 class TestGetProcessTop:
     @pytest.fixture
     def system_info_response(self) -> dict:

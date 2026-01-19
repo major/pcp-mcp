@@ -10,7 +10,14 @@ from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from pcp_mcp.context import get_client_for_host
-from pcp_mcp.icons import ICON_PROCESS, ICON_SYSTEM, TAGS_PROCESS, TAGS_SYSTEM
+from pcp_mcp.icons import (
+    ICON_HEALTH,
+    ICON_PROCESS,
+    ICON_SYSTEM,
+    TAGS_HEALTH,
+    TAGS_PROCESS,
+    TAGS_SYSTEM,
+)
 from pcp_mcp.models import ProcessTopResult, SystemSnapshot
 from pcp_mcp.utils.builders import (
     assess_processes,
@@ -90,6 +97,56 @@ PROCESS_METRICS = {
 }
 
 
+async def _fetch_system_snapshot(
+    ctx: Context,
+    categories: list[str],
+    sample_interval: float,
+    host: str | None,
+) -> SystemSnapshot:
+    """Core logic for fetching a system snapshot."""
+    from pcp_mcp.errors import handle_pcp_error
+
+    all_metrics: list[str] = []
+    for cat in categories:
+        if cat in SNAPSHOT_METRICS:
+            all_metrics.extend(SNAPSHOT_METRICS[cat])
+
+    async def report_progress(current: float, total: float, message: str) -> None:
+        await ctx.report_progress(current, total, message)
+
+    async with get_client_for_host(ctx, host) as client:
+        try:
+            data = await client.fetch_with_rates(
+                all_metrics,
+                COUNTER_METRICS,
+                sample_interval,
+                progress_callback=report_progress,
+            )
+        except Exception as e:
+            raise handle_pcp_error(e, "fetching system snapshot") from e
+
+        await ctx.report_progress(95, 100, "Building snapshot...")
+
+        snapshot = SystemSnapshot(
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            hostname=client.target_host,
+        )
+
+        if "cpu" in categories:
+            snapshot.cpu = build_cpu_metrics(data)
+        if "memory" in categories:
+            snapshot.memory = build_memory_metrics(data)
+        if "load" in categories:
+            snapshot.load = build_load_metrics(data)
+        if "disk" in categories:
+            snapshot.disk = build_disk_metrics(data)
+        if "network" in categories:
+            snapshot.network = build_network_metrics(data)
+
+        await ctx.report_progress(100, 100, "Complete")
+        return snapshot
+
+
 def register_system_tools(mcp: FastMCP) -> None:
     """Register system health tools with the MCP server."""
 
@@ -142,50 +199,33 @@ def register_system_tools(mcp: FastMCP) -> None:
             get_system_snapshot(categories=["disk", "network"]) - I/O analysis
             get_system_snapshot(host="web1.example.com") - Query remote host
         """
-        from pcp_mcp.errors import handle_pcp_error
-
         if categories is None:
             categories = ["cpu", "memory", "disk", "network", "load"]
+        return await _fetch_system_snapshot(ctx, categories, sample_interval, host)
 
-        all_metrics: list[str] = []
-        for cat in categories:
-            if cat in SNAPSHOT_METRICS:
-                all_metrics.extend(SNAPSHOT_METRICS[cat])
+    @mcp.tool(
+        annotations=TOOL_ANNOTATIONS,
+        output_schema=SystemSnapshot.model_json_schema(),
+        icons=[ICON_HEALTH],
+        tags=TAGS_HEALTH,
+    )
+    async def quick_health(
+        ctx: Context,
+        host: Annotated[
+            Optional[str],
+            Field(description="Target pmcd host to query (default: server's configured target)"),
+        ] = None,
+    ) -> SystemSnapshot:
+        """Fast system health check returning only CPU and memory metrics.
 
-        async def report_progress(current: float, total: float, message: str) -> None:
-            await ctx.report_progress(current, total, message)
+        Use this for rapid status checks when you don't need disk/network/load
+        details. Uses a shorter sample interval (0.5s) for faster results.
 
-        async with get_client_for_host(ctx, host) as client:
-            try:
-                data = await client.fetch_with_rates(
-                    all_metrics,
-                    COUNTER_METRICS,
-                    sample_interval,
-                    progress_callback=report_progress,
-                )
-            except Exception as e:
-                raise handle_pcp_error(e, "fetching system snapshot") from e
-
-            await ctx.report_progress(95, 100, "Building snapshot...")
-
-            snapshot = SystemSnapshot(
-                timestamp=datetime.now(timezone.utc).isoformat(),
-                hostname=client.target_host,
-            )
-
-            if "cpu" in categories:
-                snapshot.cpu = build_cpu_metrics(data)
-            if "memory" in categories:
-                snapshot.memory = build_memory_metrics(data)
-            if "load" in categories:
-                snapshot.load = build_load_metrics(data)
-            if "disk" in categories:
-                snapshot.disk = build_disk_metrics(data)
-            if "network" in categories:
-                snapshot.network = build_network_metrics(data)
-
-            await ctx.report_progress(100, 100, "Complete")
-            return snapshot
+        Examples:
+            quick_health() - Fast health check on default host
+            quick_health(host="web1.example.com") - Fast check on remote host
+        """
+        return await _fetch_system_snapshot(ctx, ["cpu", "memory"], 0.5, host)
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
