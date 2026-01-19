@@ -17,7 +17,10 @@ tests/
 ├── test_tools_system.py  # System tools tests
 ├── test_resources.py     # Resource tests
 ├── test_utils.py         # Utility function tests
-└── test_cli.py           # CLI argument tests
+├── test_cli.py           # CLI argument tests
+├── test_middleware.py    # Caching middleware tests
+├── test_icons.py         # Icon mapping tests
+└── test_prompts.py       # Prompt tests
 ```
 
 ## KEY FIXTURES

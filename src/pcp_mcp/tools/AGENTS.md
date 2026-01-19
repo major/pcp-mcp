@@ -42,7 +42,9 @@ def register_metrics_tools(mcp: FastMCP) -> None:
 | `search_metrics` | Find metrics by prefix | `list[MetricSearchResult]` |
 | `describe_metric` | Get metric metadata | `MetricInfo` |
 | `get_system_snapshot` | System overview with rates | `SystemSnapshot` |
+| `quick_health` | Fast health check (cached) | `str` (formatted summary) |
 | `get_process_top` | Top N processes | `ProcessTopResult` |
+| `smart_diagnose` | AI-assisted diagnosis | `str` (LLM-generated analysis) |
 
 ## ANTI-PATTERNS
 

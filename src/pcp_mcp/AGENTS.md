@@ -15,9 +15,11 @@ pcp_mcp/
 ├── models.py       # Response models (SystemSnapshot, ProcessInfo, etc.)
 ├── errors.py       # Exception → ToolError mapping
 ├── context.py      # get_client(), get_settings() helpers
+├── middleware.py   # Request caching middleware
+├── icons.py        # System assessment icons (emoji mappings)
 ├── tools/          # MCP tools (see tools/AGENTS.md)
-├── resources/      # MCP resources (read-only)
-├── utils/          # Extractors, builders, decorators
+├── resources/      # MCP resources (health.py, catalog.py)
+├── utils/          # Extractors, builders
 └── prompts/        # LLM system prompts
 ```
 
@@ -57,6 +59,8 @@ Pydantic settings with `env_prefix="PCP_"`. Computed properties: `base_url`, `au
 | New response type | `models.py` | Inherit `BaseModel` |
 | Map new exception | `errors.py` | Add case to `handle_pcp_error()` |
 | Access client in tool | `context.py` | Use `get_client(ctx)` |
+| Add caching | `middleware.py` | Request caching layer |
+| System icons | `icons.py` | Assessment emoji mappings |
 
 ## ANTI-PATTERNS
 

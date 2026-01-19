@@ -15,25 +15,27 @@ pcp-mcp/
 ├── src/pcp_mcp/           # Core package (see src/pcp_mcp/AGENTS.md)
 │   ├── tools/             # MCP tools (see src/pcp_mcp/tools/AGENTS.md)
 │   ├── resources/         # MCP resources (read-only)
-│   ├── utils/             # Extractors, builders, decorators
+│   ├── utils/             # Extractors, builders
 │   └── prompts/           # LLM system prompts
 ├── tests/                 # Test suite (see tests/AGENTS.md)
 ├── docs/                  # MkDocs source
 └── site/                  # Generated docs (gitignored)
 ```
 
+See subdirectory AGENTS.md files for detailed guidance on each module.
+
 ## WHERE TO LOOK
 
-| Task | Location | Notes |
-|------|----------|-------|
-| Add new tool | `src/pcp_mcp/tools/` | Register in `__init__.py` |
-| Add new resource | `src/pcp_mcp/resources/` | Register in `__init__.py` |
-| Modify HTTP client | `src/pcp_mcp/client.py` | Async context manager |
-| Change config | `src/pcp_mcp/config.py` | Pydantic settings, `PCP_` prefix |
-| Add response model | `src/pcp_mcp/models.py` | Pydantic BaseModel |
-| Map exceptions | `src/pcp_mcp/errors.py` | `handle_pcp_error()` |
-| CLI changes | `src/pcp_mcp/__init__.py` | `main()` with argparse |
-| Server setup | `src/pcp_mcp/server.py` | `create_server()` + lifespan |
+| Task | Location |
+|------|----------|
+| Add new tool | `src/pcp_mcp/tools/` |
+| Add new resource | `src/pcp_mcp/resources/` |
+| Modify HTTP client | `src/pcp_mcp/client.py` |
+| Change config | `src/pcp_mcp/config.py` |
+| Add response model | `src/pcp_mcp/models.py` |
+| Map exceptions | `src/pcp_mcp/errors.py` |
+| CLI changes | `src/pcp_mcp/__init__.py` |
+| Server setup | `src/pcp_mcp/server.py` |
 
 ## CONVENTIONS
 
@@ -71,7 +73,6 @@ These are CUMULATIVE (since boot), NOT per-second rates:
 **USE** `get_system_snapshot()` or `get_process_top()` instead.
 
 ### Tool Patterns
-- **NEVER** suppress types: `as any`, `@ts-ignore` (N/A for Python but pattern applies)
 - **NEVER** use empty `except:` blocks
 - **ALWAYS** wrap exceptions with `handle_pcp_error()`
 - **ALWAYS** return Pydantic models from tools
@@ -79,7 +80,6 @@ These are CUMULATIVE (since boot), NOT per-second rates:
 
 ### Resources
 - Resources are READ-ONLY
-- No write operations in resource handlers
 
 ## COMMANDS
 
