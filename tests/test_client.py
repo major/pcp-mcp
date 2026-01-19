@@ -225,16 +225,13 @@ class TestPCPClientDescribe:
 class TestPCPClientContextRecreation:
     """Tests for automatic context recreation on expiration."""
 
-    @respx.mock
-    async def test_fetch_recreates_context_on_expiration(self) -> None:
-        respx.get("/pmapi/context").mock(
-            side_effect=[
-                Response(200, json={"context": 1}),
-                Response(200, json={"context": 2}),
-            ]
-        )
-        respx.get("/pmapi/fetch").mock(
-            side_effect=[
+    @pytest.mark.parametrize(
+        ("method_name", "args", "endpoint", "expired_response", "success_response", "verify"),
+        [
+            pytest.param(
+                "fetch",
+                (["hinv.ncpu"],),
+                "/pmapi/fetch",
                 Response(400, json={"message": "unknown context identifier"}),
                 Response(
                     200,
@@ -243,56 +240,54 @@ class TestPCPClientContextRecreation:
                         "values": [{"name": "hinv.ncpu", "instances": [{"value": 4}]}],
                     },
                 ),
-            ]
-        )
-
-        async with PCPClient(base_url="http://localhost:44322") as client:
-            assert client.context_id == 1
-            result = await client.fetch(["hinv.ncpu"])
-            assert client.context_id == 2
-            assert result["values"][0]["instances"][0]["value"] == 4
-
-    @respx.mock
-    async def test_search_recreates_context_on_expiration(self) -> None:
-        respx.get("/pmapi/context").mock(
-            side_effect=[
-                Response(200, json={"context": 1}),
-                Response(200, json={"context": 2}),
-            ]
-        )
-        respx.get("/pmapi/metric").mock(
-            side_effect=[
+                lambda r: r["values"][0]["instances"][0]["value"] == 4,
+                id="fetch",
+            ),
+            pytest.param(
+                "search",
+                ("kernel",),
+                "/pmapi/metric",
                 Response(400, json={"message": "unknown context identifier"}),
                 Response(200, json={"metrics": [{"name": "kernel.all.load"}]}),
-            ]
-        )
-
-        async with PCPClient(base_url="http://localhost:44322") as client:
-            assert client.context_id == 1
-            result = await client.search("kernel")
-            assert client.context_id == 2
-            assert len(result) == 1
-
+                lambda r: len(r) == 1,
+                id="search",
+            ),
+            pytest.param(
+                "describe",
+                ("hinv.ncpu",),
+                "/pmapi/metric",
+                Response(400, json={"message": "unknown context identifier"}),
+                Response(200, json={"metrics": [{"name": "hinv.ncpu", "sem": "instant"}]}),
+                lambda r: r.get("sem") == "instant",
+                id="describe",
+            ),
+        ],
+    )
     @respx.mock
-    async def test_describe_recreates_context_on_expiration(self) -> None:
+    async def test_recreates_context_on_expiration(
+        self,
+        method_name: str,
+        args: tuple,
+        endpoint: str,
+        expired_response: Response,
+        success_response: Response,
+        verify,
+    ) -> None:
+        """Test that methods recreate context when it expires."""
         respx.get("/pmapi/context").mock(
             side_effect=[
                 Response(200, json={"context": 1}),
                 Response(200, json={"context": 2}),
             ]
         )
-        respx.get("/pmapi/metric").mock(
-            side_effect=[
-                Response(400, json={"message": "unknown context identifier"}),
-                Response(200, json={"metrics": [{"name": "hinv.ncpu", "sem": "instant"}]}),
-            ]
-        )
+        respx.get(endpoint).mock(side_effect=[expired_response, success_response])
 
         async with PCPClient(base_url="http://localhost:44322") as client:
             assert client.context_id == 1
-            result = await client.describe("hinv.ncpu")
+            method = getattr(client, method_name)
+            result = await method(*args)
             assert client.context_id == 2
-            assert result["sem"] == "instant"
+            assert verify(result)
 
     @respx.mock
     async def test_does_not_recreate_on_other_400_errors(self) -> None:
