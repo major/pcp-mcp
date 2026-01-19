@@ -82,6 +82,21 @@ class TestHostHealthResource:
         assert "Error" in result
         assert "not allowed" in result
 
+    async def test_handles_connection_error(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch_with_rates.side_effect = Exception("Connection refused")
+
+        resources = capture_resources(register_health_resources)
+        result = await resources["pcp://host/{hostname}/health"](mock_context, hostname="localhost")
+
+        assert "Error" in result
+        assert "Connection refused" in result
+
 
 class TestMetricInfoResource:
     async def test_returns_metric_info(
@@ -142,6 +157,22 @@ class TestMetricInfoResource:
 
         assert "Not Found" in result
         assert "nonexistent.metric" in result
+
+    async def test_handles_connection_error(
+        self,
+        mock_context: MagicMock,
+        capture_resources,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].describe.side_effect = httpx.ConnectError("Connection refused")
+
+        resources = capture_resources(register_catalog_resources)
+
+        with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
+            await resources["pcp://metric/{metric_name}/info"](
+                mock_context, metric_name="kernel.all.load"
+            )
 
 
 class TestCommonMetricsCatalog:
