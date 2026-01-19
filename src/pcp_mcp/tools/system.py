@@ -11,14 +11,16 @@ from pydantic import Field
 
 from pcp_mcp.context import get_client_for_host
 from pcp_mcp.icons import (
+    ICON_DIAGNOSE,
     ICON_HEALTH,
     ICON_PROCESS,
     ICON_SYSTEM,
+    TAGS_DIAGNOSE,
     TAGS_HEALTH,
     TAGS_PROCESS,
     TAGS_SYSTEM,
 )
-from pcp_mcp.models import ProcessTopResult, SystemSnapshot
+from pcp_mcp.models import DiagnosisResult, ProcessTopResult, SystemSnapshot
 from pcp_mcp.utils.builders import (
     assess_processes,
     build_cpu_metrics,
@@ -322,3 +324,158 @@ def register_system_tools(mcp: FastMCP) -> None:
                 ncpu=ncpu,
                 assessment=assessment,
             )
+
+    @mcp.tool(
+        annotations=TOOL_ANNOTATIONS,
+        output_schema=DiagnosisResult.model_json_schema(),
+        icons=[ICON_DIAGNOSE],
+        tags=TAGS_DIAGNOSE,
+    )
+    async def smart_diagnose(
+        ctx: Context,
+        host: Annotated[
+            Optional[str],
+            Field(description="Target pmcd host to query (default: server's configured target)"),
+        ] = None,
+    ) -> DiagnosisResult:
+        """Use LLM to analyze system metrics and provide diagnosis.
+
+        Collects a quick system snapshot (CPU, memory, load) and asks the
+        connected LLM to analyze the metrics and provide actionable insights.
+
+        This tool demonstrates FastMCP's LLM sampling capability, where the
+        MCP server can request LLM assistance for complex analysis tasks.
+
+        Examples:
+            smart_diagnose() - Analyze default host
+            smart_diagnose(host="db1.example.com") - Analyze remote host
+        """
+        from pcp_mcp.errors import handle_pcp_error
+
+        try:
+            snapshot = await _fetch_system_snapshot(ctx, ["cpu", "memory", "load"], 0.5, host)
+        except Exception as e:
+            raise handle_pcp_error(e, "fetching metrics for diagnosis") from e
+
+        metrics_summary = _format_snapshot_for_llm(snapshot)
+
+        system_prompt = (
+            "You are a system performance analyst. Analyze the metrics and provide:\n"
+            "1. A brief diagnosis (2-3 sentences)\n"
+            "2. A severity level: 'healthy', 'warning', or 'critical'\n"
+            "3. Up to 3 actionable recommendations\n\n"
+            "Be concise and focus on actionable insights."
+        )
+
+        try:
+            sampling_result = await ctx.sample(
+                messages=f"Analyze these system metrics:\n\n{metrics_summary}",
+                system_prompt=system_prompt,
+                max_tokens=500,
+                result_type=DiagnosisResult,
+            )
+            result = sampling_result.result
+            result.timestamp = snapshot.timestamp
+            result.hostname = snapshot.hostname
+            return result
+        except Exception:
+            return _build_fallback_diagnosis(snapshot)
+
+
+def _format_snapshot_for_llm(snapshot: SystemSnapshot) -> str:
+    """Format a system snapshot as text for LLM analysis."""
+    lines = [f"Host: {snapshot.hostname}", f"Time: {snapshot.timestamp}", ""]
+
+    if snapshot.cpu:
+        lines.extend(
+            [
+                "CPU:",
+                f"  User: {snapshot.cpu.user_percent:.1f}%",
+                f"  System: {snapshot.cpu.system_percent:.1f}%",
+                f"  Idle: {snapshot.cpu.idle_percent:.1f}%",
+                f"  I/O Wait: {snapshot.cpu.iowait_percent:.1f}%",
+                f"  CPUs: {snapshot.cpu.ncpu}",
+                "",
+            ]
+        )
+
+    if snapshot.memory:
+        total_gb = snapshot.memory.total_bytes / (1024**3)
+        avail_gb = snapshot.memory.available_bytes / (1024**3)
+        lines.extend(
+            [
+                "Memory:",
+                f"  Total: {total_gb:.1f} GB",
+                f"  Available: {avail_gb:.1f} GB",
+                f"  Used: {snapshot.memory.used_percent:.1f}%",
+                f"  Swap Used: {snapshot.memory.swap_used_bytes / (1024**3):.1f} GB",
+                "",
+            ]
+        )
+
+    if snapshot.load:
+        lines.extend(
+            [
+                "Load:",
+                f"  1m/5m/15m: {snapshot.load.load_1m:.2f} / "
+                f"{snapshot.load.load_5m:.2f} / {snapshot.load.load_15m:.2f}",
+                f"  Runnable: {snapshot.load.runnable}",
+                f"  Total procs: {snapshot.load.nprocs}",
+            ]
+        )
+
+    return "\n".join(lines)
+
+
+def _build_fallback_diagnosis(snapshot: SystemSnapshot) -> DiagnosisResult:
+    """Build a basic diagnosis when LLM sampling isn't available."""
+    issues: list[str] = []
+    recommendations: list[str] = []
+    severity = "healthy"
+
+    if snapshot.cpu:
+        cpu_busy = 100 - snapshot.cpu.idle_percent
+        if cpu_busy > 90:
+            issues.append(f"CPU is heavily loaded ({cpu_busy:.0f}% busy)")
+            recommendations.append("Identify high-CPU processes with get_process_top")
+            severity = "critical"
+        elif cpu_busy > 70:
+            issues.append(f"CPU moderately busy ({cpu_busy:.0f}%)")
+            severity = "warning" if severity == "healthy" else severity
+
+    if snapshot.memory:
+        if snapshot.memory.used_percent > 90:
+            issues.append(f"Memory pressure high ({snapshot.memory.used_percent:.0f}% used)")
+            recommendations.append("Check for memory leaks or increase RAM")
+            severity = "critical"
+        elif snapshot.memory.used_percent > 75:
+            issues.append(f"Memory usage elevated ({snapshot.memory.used_percent:.0f}%)")
+            severity = "warning" if severity == "healthy" else severity
+
+    if snapshot.load and snapshot.cpu:
+        load_per_cpu = snapshot.load.load_1m / snapshot.cpu.ncpu
+        if load_per_cpu > 2.0:
+            issues.append(
+                f"Load very high ({snapshot.load.load_1m:.1f} for {snapshot.cpu.ncpu} CPUs)"
+            )
+            recommendations.append("Reduce concurrent workload or add capacity")
+            severity = "critical"
+        elif load_per_cpu > 1.0:
+            issues.append(f"Load elevated ({snapshot.load.load_1m:.1f})")
+            severity = "warning" if severity == "healthy" else severity
+
+    if not issues:
+        diagnosis = "System is operating normally. No issues detected."
+    else:
+        diagnosis = " ".join(issues)
+
+    if not recommendations:
+        recommendations = ["Continue monitoring"]
+
+    return DiagnosisResult(
+        timestamp=snapshot.timestamp,
+        hostname=snapshot.hostname,
+        diagnosis=diagnosis,
+        severity=severity,
+        recommendations=recommendations,
+    )

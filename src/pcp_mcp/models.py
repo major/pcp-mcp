@@ -140,3 +140,13 @@ class ProcessTopResult(BaseModel):
     total_memory_bytes: int = Field(description="Total system memory")
     ncpu: int = Field(description="Number of CPUs")
     assessment: str = Field(description="Brief interpretation of top processes")
+
+
+class DiagnosisResult(BaseModel):
+    """LLM-powered system diagnosis."""
+
+    timestamp: str = Field(description="ISO8601 timestamp")
+    hostname: str = Field(description="Target host name")
+    diagnosis: str = Field(description="LLM-generated analysis of system health")
+    severity: str = Field(description="Severity level: healthy, warning, or critical")
+    recommendations: list[str] = Field(description="Actionable recommendations")
