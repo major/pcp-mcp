@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -119,8 +118,8 @@ class TestMetricCacheMiddleware:
         assert middleware.cache_size == 2
 
     def test_clear_cache(self, middleware: MetricCacheMiddleware) -> None:
-        middleware._cache["key1"] = (time.time(), MagicMock())
-        middleware._cache["key2"] = (time.time(), MagicMock())
+        middleware._cache["key1"] = MagicMock()
+        middleware._cache["key2"] = MagicMock()
 
         assert middleware.cache_size == 2
         middleware.clear_cache()
@@ -140,3 +139,22 @@ class TestMetricCacheMiddleware:
         await middleware.on_call_tool(mock_context, mock_call_next)
 
         assert mock_call_next.call_count == 1
+
+    async def test_evicts_lru_when_maxsize_reached(
+        self,
+        mock_context: MagicMock,
+        mock_call_next: AsyncMock,
+    ) -> None:
+        middleware = MetricCacheMiddleware(ttl_seconds=60, maxsize=2)
+
+        mock_context.message.arguments = {"name": "metric1"}
+        await middleware.on_call_tool(mock_context, mock_call_next)
+
+        mock_context.message.arguments = {"name": "metric2"}
+        await middleware.on_call_tool(mock_context, mock_call_next)
+
+        mock_context.message.arguments = {"name": "metric3"}
+        await middleware.on_call_tool(mock_context, mock_call_next)
+
+        assert middleware.cache_size == 2
+        assert mock_call_next.call_count == 3
