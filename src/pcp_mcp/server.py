@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastmcp import FastMCP
-from fastmcp.server.middleware.logging import LoggingMiddleware
+from fastmcp.server.middleware.logging import StructuredLoggingMiddleware
 
 from pcp_mcp.client import PCPClient
 from pcp_mcp.config import PCPMCPSettings
@@ -124,7 +124,12 @@ Prompts (invoke for guided troubleshooting workflows):
         lifespan=lifespan,
     )
 
-    mcp.add_middleware(LoggingMiddleware())
+    mcp.add_middleware(
+        StructuredLoggingMiddleware(
+            include_payload_length=True,
+            estimate_payload_tokens=True,
+        )
+    )
 
     from pcp_mcp.prompts import register_prompts
     from pcp_mcp.resources import register_resources
