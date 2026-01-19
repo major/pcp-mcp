@@ -17,6 +17,7 @@ from pcp_mcp.utils.builders import (
 from pcp_mcp.utils.extractors import (
     extract_help_text,
     extract_timestamp,
+    format_units,
     get_first_value,
     get_scalar_value,
     sum_instances,
@@ -108,6 +109,28 @@ class TestExtractTimestamp:
     )
     def test_extraction(self, response: dict, expected: float) -> None:
         assert extract_timestamp(response) == pytest.approx(expected)
+
+
+class TestFormatUnits:
+    @pytest.mark.parametrize(
+        ("info", "expected"),
+        [
+            ({"units": "millisec"}, "millisec"),
+            ({"units": "byte"}, "byte"),
+            ({}, "none"),
+            ({"units": ""}, "none"),
+            ({"units": "", "units-space": "Kbyte"}, "Kbyte"),
+            ({"units": "", "units-time": "sec"}, "sec"),
+            ({"units": "", "units-count": "count"}, "count"),
+            ({"units": "", "units-space": "Kbyte", "units-time": "sec"}, "Kbyte / sec"),
+            (
+                {"units": "", "units-space": "Mbyte", "units-time": "sec", "units-count": "count"},
+                "Mbyte / sec / count",
+            ),
+        ],
+    )
+    def test_format_units(self, info: dict, expected: str) -> None:
+        assert format_units(info) == expected
 
 
 class TestBuildCPUMetrics:
