@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -52,12 +52,14 @@ class PCPMCPSettings(BaseSettings):
         ),
     )
 
+    @computed_field
     @property
     def base_url(self) -> str:
         """URL for connecting to pmproxy."""
         scheme = "https" if self.use_tls else "http"
         return f"{scheme}://{self.host}:{self.port}"
 
+    @computed_field
     @property
     def auth(self) -> tuple[str, str] | None:
         """Auth tuple for httpx, or None if no auth configured."""
@@ -65,6 +67,7 @@ class PCPMCPSettings(BaseSettings):
             return (self.username, self.password)
         return None
 
+    @computed_field
     @property
     def verify(self) -> bool | str:
         """TLS verification setting for httpx.
