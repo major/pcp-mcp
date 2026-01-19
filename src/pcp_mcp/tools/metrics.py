@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastmcp import Context
 from mcp.types import ToolAnnotations
-from pydantic import Field, TypeAdapter
+from pydantic import Field
 
 from pcp_mcp.context import get_client_for_host
 from pcp_mcp.icons import (
@@ -14,15 +14,19 @@ from pcp_mcp.icons import (
     TAGS_DISCOVERY,
     TAGS_METRICS,
 )
-from pcp_mcp.models import MetricInfo, MetricSearchResult, MetricValue
+from pcp_mcp.models import (
+    MetricInfo,
+    MetricSearchResult,
+    MetricSearchResultList,
+    MetricValue,
+    MetricValueList,
+)
 from pcp_mcp.utils.extractors import extract_help_text, format_units
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
 
 TOOL_ANNOTATIONS = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
-METRIC_VALUE_LIST_SCHEMA = TypeAdapter(list[MetricValue]).json_schema()
-METRIC_SEARCH_LIST_SCHEMA = TypeAdapter(list[MetricSearchResult]).json_schema()
 
 
 def register_metrics_tools(mcp: "FastMCP") -> None:
@@ -30,7 +34,6 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
-        output_schema=METRIC_VALUE_LIST_SCHEMA,
         icons=[ICON_METRICS],
         tags=TAGS_METRICS,
     )
@@ -44,7 +47,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> list[MetricValue]:
+    ) -> MetricValueList:
         """Fetch current values for specific PCP metrics.
 
         Returns the current value for each requested metric. For metrics with
@@ -88,11 +91,10 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
                         )
                     )
 
-            return results
+            return MetricValueList(metrics=results)
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
-        output_schema=METRIC_SEARCH_LIST_SCHEMA,
         icons=[ICON_SEARCH],
         tags=TAGS_METRICS | TAGS_DISCOVERY,
     )
@@ -106,7 +108,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> list[MetricSearchResult]:
+    ) -> MetricSearchResultList:
         """Find PCP metrics matching a name pattern.
 
         Use this to discover available metrics before querying them.
@@ -127,13 +129,14 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
             except Exception as e:
                 raise handle_pcp_error(e, "searching metrics") from e
 
-            return [
+            results = [
                 MetricSearchResult(
                     name=m.get("name", ""),
                     help_text=extract_help_text(m),
                 )
                 for m in metrics
             ]
+            return MetricSearchResultList(results=results)
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,

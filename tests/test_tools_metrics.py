@@ -32,11 +32,11 @@ class TestQueryMetrics:
 
         result = await tools["query_metrics"](mock_context, names=["kernel.all.load"])
 
-        assert len(result) == 2
-        assert result[0].name == "kernel.all.load"
-        assert result[0].value == 1.5
-        assert result[0].instance == "1 minute"
-        assert result[1].instance == "5 minute"
+        assert len(result.metrics) == 2
+        assert result.metrics[0].name == "kernel.all.load"
+        assert result.metrics[0].value == 1.5
+        assert result.metrics[0].instance == "1 minute"
+        assert result.metrics[1].instance == "5 minute"
 
     async def test_query_metrics_handles_no_instance(
         self,
@@ -56,9 +56,9 @@ class TestQueryMetrics:
 
         result = await tools["query_metrics"](mock_context, names=["hinv.ncpu"])
 
-        assert len(result) == 1
-        assert result[0].instance is None
-        assert result[0].value == 8
+        assert len(result.metrics) == 1
+        assert result.metrics[0].instance is None
+        assert result.metrics[0].value == 8
 
     async def test_query_metrics_raises_on_error(
         self,
@@ -92,10 +92,10 @@ class TestSearchMetrics:
 
         result = await tools["search_metrics"](mock_context, pattern="kernel.all.cpu")
 
-        assert len(result) == 2
-        assert result[0].name == "kernel.all.cpu.user"
-        assert result[0].help_text == "User CPU time"
-        assert result[1].help_text == "System CPU time"
+        assert len(result.results) == 2
+        assert result.results[0].name == "kernel.all.cpu.user"
+        assert result.results[0].help_text == "User CPU time"
+        assert result.results[1].help_text == "System CPU time"
 
     async def test_search_metrics_empty_results(
         self,
@@ -108,7 +108,7 @@ class TestSearchMetrics:
 
         result = await tools["search_metrics"](mock_context, pattern="nonexistent")
 
-        assert result == []
+        assert result.results == []
 
     async def test_search_metrics_raises_on_error(
         self,

@@ -33,6 +33,18 @@ class MetricSearchResult(BaseModel):
     help_text: str | None = Field(default=None, description="Brief description")
 
 
+class MetricValueList(BaseModel):
+    """Container for a list of metric values (MCP requires object return types)."""
+
+    metrics: list[MetricValue] = Field(description="List of metric values")
+
+
+class MetricSearchResultList(BaseModel):
+    """Container for metric search results (MCP requires object return types)."""
+
+    results: list[MetricSearchResult] = Field(description="List of matching metrics")
+
+
 class InstancedMetric(BaseModel):
     """Metric with per-instance values (e.g., per-CPU, per-disk)."""
 
