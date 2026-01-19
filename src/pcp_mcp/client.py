@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from typing import TYPE_CHECKING
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -11,6 +12,12 @@ else:
     from typing_extensions import Self
 
 import httpx
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+    from typing import Any
+
+    ProgressCallback = Callable[[float, float, str], Coroutine[Any, Any, None]]
 
 
 class PCPClient:
@@ -189,6 +196,7 @@ class PCPClient:
         metric_names: list[str],
         counter_metrics: set[str],
         sample_interval: float = 1.0,
+        progress_callback: ProgressCallback | None = None,
     ) -> dict[str, dict]:
         """Fetch metrics, calculating rates for counters.
 
@@ -200,14 +208,30 @@ class PCPClient:
             metric_names: List of PCP metric names to fetch.
             counter_metrics: Set of metric names that are counters.
             sample_interval: Seconds between samples for rate calculation.
+            progress_callback: Optional async callback for progress updates.
+                Called with (current, total, message) during long operations.
 
         Returns:
             Dict mapping metric name to {value, instances} where value/instances
             contain the rate (for counters) or instant value (for gauges).
         """
+        if progress_callback:
+            await progress_callback(0, 100, "Collecting first sample...")
+
         t1 = await self.fetch(metric_names)
+
+        if progress_callback:
+            await progress_callback(20, 100, f"Waiting {sample_interval}s for rate calculation...")
+
         await asyncio.sleep(sample_interval)
+
+        if progress_callback:
+            await progress_callback(70, 100, "Collecting second sample...")
+
         t2 = await self.fetch(metric_names)
+
+        if progress_callback:
+            await progress_callback(90, 100, "Computing rates...")
 
         ts1 = t1.get("timestamp", 0.0)
         ts2 = t2.get("timestamp", 0.0)

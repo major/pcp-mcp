@@ -578,3 +578,70 @@ class TestPCPClientFetchWithRates:
             )
 
             assert result["disk.all.read_bytes"]["instances"][-1] == pytest.approx(100000.0)
+
+    @respx.mock
+    async def test_fetch_with_rates_calls_progress_callback(self) -> None:
+        respx.get("/pmapi/context").mock(return_value=Response(200, json={"context": 1}))
+        respx.get("/pmapi/fetch").mock(
+            side_effect=[
+                Response(
+                    200,
+                    json={
+                        "timestamp": {"s": 1000, "us": 0},
+                        "values": [
+                            {"name": "hinv.ncpu", "instances": [{"instance": -1, "value": 4}]}
+                        ],
+                    },
+                ),
+                Response(
+                    200,
+                    json={
+                        "timestamp": {"s": 1001, "us": 0},
+                        "values": [
+                            {"name": "hinv.ncpu", "instances": [{"instance": -1, "value": 4}]}
+                        ],
+                    },
+                ),
+            ]
+        )
+
+        progress_calls: list[tuple[float, float, str]] = []
+
+        async def track_progress(current: float, total: float, message: str) -> None:
+            progress_calls.append((current, total, message))
+
+        async with PCPClient(base_url="http://localhost:44322") as client:
+            await client.fetch_with_rates(
+                metric_names=["hinv.ncpu"],
+                counter_metrics=set(),
+                sample_interval=0.01,
+                progress_callback=track_progress,
+            )
+
+        assert len(progress_calls) == 4
+        assert progress_calls[0][0] == 0
+        assert progress_calls[-1][0] == 90
+        assert "first sample" in progress_calls[0][2].lower()
+        assert "rate" in progress_calls[1][2].lower()
+
+    @respx.mock
+    async def test_fetch_with_rates_works_without_progress_callback(self) -> None:
+        respx.get("/pmapi/context").mock(return_value=Response(200, json={"context": 1}))
+        respx.get("/pmapi/fetch").mock(
+            return_value=Response(
+                200,
+                json={
+                    "timestamp": {"s": 1000, "us": 0},
+                    "values": [{"name": "hinv.ncpu", "instances": [{"instance": -1, "value": 4}]}],
+                },
+            )
+        )
+
+        async with PCPClient(base_url="http://localhost:44322") as client:
+            result = await client.fetch_with_rates(
+                metric_names=["hinv.ncpu"],
+                counter_metrics=set(),
+                sample_interval=0.01,
+            )
+
+        assert "hinv.ncpu" in result
