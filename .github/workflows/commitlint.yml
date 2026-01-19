@@ -19,5 +19,4 @@ jobs:
         run: uv tool install commitizen
 
       - name: Validate commits
-        run: |
-          uv tool run cz check --rev-range origin/${{ github.base_ref }}..HEAD
+        run: cz check --rev-range origin/${{ github.base_ref }}..HEAD
