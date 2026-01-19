@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from fastmcp import FastMCP
 
 
-def register_metrics_tools(mcp: FastMCP) -> None:
+def register_metrics_tools(mcp: "FastMCP") -> None:
     """Register core metric tools with the MCP server."""
 
     @mcp.tool()
