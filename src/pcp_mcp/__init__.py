@@ -20,6 +20,8 @@ Environment Variables:
   PCP_TIMEOUT       Request timeout in seconds (default: 30)
   PCP_USERNAME      HTTP basic auth user (optional)
   PCP_PASSWORD      HTTP basic auth password (optional)
+  PCP_ALLOWED_HOSTS Comma-separated hostspecs allowed via host parameter (optional)
+                    If not set, only target_host is allowed. Use '*' for any host.
 
 Examples:
   # Monitor localhost (default)

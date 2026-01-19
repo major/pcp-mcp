@@ -51,3 +51,49 @@ def test_auth_combinations(
 ) -> None:
     settings = PCPMCPSettings(username=username, password=password)
     assert settings.auth == expected_auth
+
+
+def test_default_allowed_hosts_is_none() -> None:
+    settings = PCPMCPSettings()
+    assert settings.allowed_hosts is None
+
+
+class TestIsHostAllowed:
+    def test_target_host_always_allowed(self) -> None:
+        settings = PCPMCPSettings(target_host="myhost.example.com")
+        assert settings.is_host_allowed("myhost.example.com") is True
+
+    def test_other_host_denied_when_allowlist_is_none(self) -> None:
+        settings = PCPMCPSettings(target_host="localhost")
+        assert settings.is_host_allowed("attacker.example.com") is False
+
+    def test_allowlisted_host_permitted(self) -> None:
+        settings = PCPMCPSettings(
+            target_host="localhost",
+            allowed_hosts=["web1.example.com", "db1.example.com"],
+        )
+        assert settings.is_host_allowed("web1.example.com") is True
+        assert settings.is_host_allowed("db1.example.com") is True
+
+    def test_non_allowlisted_host_denied(self) -> None:
+        settings = PCPMCPSettings(
+            target_host="localhost",
+            allowed_hosts=["web1.example.com"],
+        )
+        assert settings.is_host_allowed("attacker.example.com") is False
+
+    def test_wildcard_allows_any_host(self) -> None:
+        settings = PCPMCPSettings(
+            target_host="localhost",
+            allowed_hosts=["*"],
+        )
+        assert settings.is_host_allowed("any.host.anywhere.com") is True
+        assert settings.is_host_allowed("192.168.1.1") is True
+
+    def test_empty_allowlist_denies_all_except_target(self) -> None:
+        settings = PCPMCPSettings(
+            target_host="localhost",
+            allowed_hosts=[],
+        )
+        assert settings.is_host_allowed("localhost") is True
+        assert settings.is_host_allowed("other.host.com") is False
