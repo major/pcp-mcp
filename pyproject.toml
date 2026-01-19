@@ -66,6 +66,7 @@ ignore = [
     "D104", # Missing docstring in public package
     "D105", # Missing docstring in magic method
     "D107", # Missing docstring in __init__
+    "UP045", # Optional[X] vs X | None - Pydantic needs Optional in Annotated params
 ]
 
 [tool.ruff.lint.per-file-ignores]

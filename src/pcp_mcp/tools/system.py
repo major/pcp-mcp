@@ -1,9 +1,7 @@
 """System health tools for clumped metric queries."""
 
-from __future__ import annotations
-
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal, Optional
 
 from fastmcp import Context
 from pydantic import Field
@@ -93,7 +91,7 @@ def register_system_tools(mcp: FastMCP) -> None:
     async def get_system_snapshot(
         ctx: Context,
         categories: Annotated[
-            list[str] | None,
+            Optional[list[str]],
             Field(
                 default=None,
                 description=(
@@ -112,7 +110,7 @@ def register_system_tools(mcp: FastMCP) -> None:
             ),
         ] = 1.0,
         host: Annotated[
-            str | None,
+            Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
     ) -> SystemSnapshot:
@@ -192,7 +190,7 @@ def register_system_tools(mcp: FastMCP) -> None:
             ),
         ] = 1.0,
         host: Annotated[
-            str | None,
+            Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
     ) -> ProcessTopResult:

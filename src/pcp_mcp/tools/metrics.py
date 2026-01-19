@@ -1,8 +1,6 @@
 """Core metric tools for querying PCP metrics."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastmcp import Context
 from pydantic import Field
@@ -26,7 +24,7 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             Field(description="List of PCP metric names to fetch (e.g., ['kernel.all.load'])"),
         ],
         host: Annotated[
-            str | None,
+            Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
     ) -> list[MetricValue]:
@@ -83,7 +81,7 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             Field(description="Metric name prefix to search for (e.g., 'kernel.all', 'mem')"),
         ],
         host: Annotated[
-            str | None,
+            Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
     ) -> list[MetricSearchResult]:
@@ -123,7 +121,7 @@ def register_metrics_tools(mcp: FastMCP) -> None:
             Field(description="Full PCP metric name (e.g., 'kernel.all.cpu.user')"),
         ],
         host: Annotated[
-            str | None,
+            Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
     ) -> MetricInfo:
