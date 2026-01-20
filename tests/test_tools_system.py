@@ -10,10 +10,40 @@ from fastmcp.exceptions import ToolError
 
 from pcp_mcp.models import DiagnosisResult
 from pcp_mcp.tools.system import (
+    _assess_filesystems,
     _build_fallback_diagnosis,
+    _build_filesystem_list,
     _format_snapshot_for_llm,
     register_system_tools,
 )
+
+
+class TestToolErrorHandling:
+    @pytest.mark.parametrize(
+        ("tool_name", "client_method", "tool_kwargs"),
+        [
+            ("get_system_snapshot", "fetch_with_rates", {}),
+            ("get_process_top", "fetch_with_rates", {}),
+            ("smart_diagnose", "fetch_with_rates", {}),
+            ("get_filesystem_usage", "fetch", {}),
+        ],
+    )
+    async def test_handles_connection_error(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        tool_name: str,
+        client_method: str,
+        tool_kwargs: dict,
+    ) -> None:
+        getattr(
+            mock_context.request_context.lifespan_context["client"], client_method
+        ).side_effect = httpx.ConnectError("Connection refused")
+
+        tools = capture_tools(register_system_tools)
+
+        with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
+            await tools[tool_name](mock_context, **tool_kwargs)
 
 
 class TestGetSystemSnapshot:
@@ -73,20 +103,6 @@ class TestGetSystemSnapshot:
 
         assert result.cpu is not None
         assert result.memory is None
-
-    async def test_handles_error(
-        self,
-        mock_context: MagicMock,
-        capture_tools,
-    ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.side_effect = httpx.ConnectError("Connection refused")
-
-        tools = capture_tools(register_system_tools)
-
-        with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
-            await tools["get_system_snapshot"](mock_context)
 
     async def test_reports_progress(
         self,
@@ -193,20 +209,6 @@ class TestGetProcessTop:
         assert result.ncpu == 4
         assert getattr(result.processes[0], expected_field) is not None
 
-    async def test_handles_error(
-        self,
-        mock_context: MagicMock,
-        capture_tools,
-    ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.side_effect = httpx.ConnectError("Connection refused")
-
-        tools = capture_tools(register_system_tools)
-
-        with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
-            await tools["get_process_top"](mock_context)
-
     async def test_reports_progress(
         self,
         mock_context: MagicMock,
@@ -294,20 +296,6 @@ class TestSmartDiagnose:
         assert result.hostname == "localhost"
         assert len(result.recommendations) > 0
 
-    async def test_handles_connection_error(
-        self,
-        mock_context: MagicMock,
-        capture_tools,
-    ) -> None:
-        mock_context.request_context.lifespan_context[
-            "client"
-        ].fetch_with_rates.side_effect = httpx.ConnectError("Connection refused")
-
-        tools = capture_tools(register_system_tools)
-
-        with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
-            await tools["smart_diagnose"](mock_context)
-
 
 class TestFormatSnapshotForLlm:
     def test_formats_all_sections(self, full_system_snapshot_data) -> None:
@@ -348,6 +336,158 @@ class TestFormatSnapshotForLlm:
         assert "CPU:" not in result
 
 
+class TestGetFilesystemUsage:
+    async def test_returns_filesystem_info(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        filesystem_metrics_response,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch.return_value = filesystem_metrics_response()
+
+        tools = capture_tools(register_system_tools)
+        result = await tools["get_filesystem_usage"](mock_context)
+
+        assert len(result.filesystems) == 2
+        assert result.hostname == "localhost"
+        assert result.filesystems[0].mount_point == "/"
+        assert result.filesystems[0].fs_type == "ext4"
+        assert result.filesystems[0].capacity_bytes == 100_000_000 * 1024
+        assert result.filesystems[0].percent_full == 20.0
+
+    async def test_handles_empty_filesystems(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        filesystem_metrics_response,
+    ) -> None:
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch.return_value = filesystem_metrics_response(filesystems=[])
+
+        tools = capture_tools(register_system_tools)
+        result = await tools["get_filesystem_usage"](mock_context)
+
+        assert len(result.filesystems) == 0
+        assert "No filesystems found" in result.assessment
+
+    async def test_sorts_by_mount_point(
+        self,
+        mock_context: MagicMock,
+        capture_tools,
+        filesystem_metrics_response,
+    ) -> None:
+        filesystems = [
+            {
+                "instance": 0,
+                "mountdir": "/var",
+                "type": "ext4",
+                "capacity": 100,
+                "used": 50,
+                "avail": 50,
+                "full": 50.0,
+            },
+            {
+                "instance": 1,
+                "mountdir": "/",
+                "type": "ext4",
+                "capacity": 100,
+                "used": 20,
+                "avail": 80,
+                "full": 20.0,
+            },
+            {
+                "instance": 2,
+                "mountdir": "/home",
+                "type": "ext4",
+                "capacity": 100,
+                "used": 30,
+                "avail": 70,
+                "full": 30.0,
+            },
+        ]
+        mock_context.request_context.lifespan_context[
+            "client"
+        ].fetch.return_value = filesystem_metrics_response(filesystems=filesystems)
+
+        tools = capture_tools(register_system_tools)
+        result = await tools["get_filesystem_usage"](mock_context)
+
+        mount_points = [fs.mount_point for fs in result.filesystems]
+        assert mount_points == ["/", "/home", "/var"]
+
+
+class TestBuildFilesystemList:
+    def test_builds_from_pmproxy_response(self, filesystem_metrics_response) -> None:
+        response = filesystem_metrics_response()
+        result = _build_filesystem_list(response)
+
+        assert len(result) == 2
+        assert result[0].mount_point == "/"
+        assert result[0].capacity_bytes == 100_000_000 * 1024
+        assert result[0].used_bytes == 20_000_000 * 1024
+        assert result[0].available_bytes == 75_000_000 * 1024
+        assert result[0].percent_full == 20.0
+        assert result[0].fs_type == "ext4"
+
+    def test_handles_empty_response(self) -> None:
+        result = _build_filesystem_list({"values": []})
+        assert result == []
+
+    def test_handles_missing_metrics(self) -> None:
+        response = {
+            "values": [
+                {
+                    "name": "filesys.mountdir",
+                    "instances": [{"instance": 0, "value": "/"}],
+                },
+            ]
+        }
+        result = _build_filesystem_list(response)
+
+        assert len(result) == 1
+        assert result[0].mount_point == "/"
+        assert result[0].capacity_bytes == 0
+        assert result[0].fs_type == "unknown"
+
+
+class TestAssessFilesystems:
+    @pytest.mark.parametrize(
+        ("percent_full", "mount_point", "expected_indicator", "expected_mount"),
+        [
+            (20.0, "/", "🟢", None),
+            (85.0, "/boot", "🟡", "/boot"),
+            (95.0, "/var", "🔴", "/var"),
+        ],
+    )
+    def test_filesystem_assessment_levels(
+        self,
+        filesystem_info_factory,
+        percent_full: float,
+        mount_point: str,
+        expected_indicator: str,
+        expected_mount: str | None,
+    ) -> None:
+        used = int(100_000 * percent_full / 100)
+        fs = filesystem_info_factory(
+            mount_point=mount_point,
+            percent_full=percent_full,
+            used_bytes=used,
+            available_bytes=100_000 - used,
+        )
+        result = _assess_filesystems([fs])
+
+        assert expected_indicator in result
+        if expected_mount:
+            assert expected_mount in result
+
+    def test_empty_filesystems(self) -> None:
+        result = _assess_filesystems([])
+        assert "No filesystems found" in result
+
+
 class TestBuildFallbackDiagnosis:
     @pytest.mark.parametrize(
         ("cpu_idle", "mem_used", "load_1m", "ncpu", "expected_severity"),
@@ -363,50 +503,18 @@ class TestBuildFallbackDiagnosis:
     )
     def test_severity_levels(
         self,
+        system_snapshot_factory,
         cpu_idle: float,
         mem_used: float,
         load_1m: float,
         ncpu: int,
         expected_severity: str,
     ) -> None:
-        from pcp_mcp.models import (
-            CPUMetrics,
-            LoadMetrics,
-            MemoryMetrics,
-            SystemSnapshot,
-        )
-
-        snapshot = SystemSnapshot(
-            timestamp="2025-01-18T12:00:00Z",
-            hostname="testhost",
-            cpu=CPUMetrics(
-                user_percent=100 - cpu_idle - 5,
-                system_percent=5.0,
-                idle_percent=cpu_idle,
-                iowait_percent=0.0,
-                ncpu=ncpu,
-                assessment="test",
-            ),
-            memory=MemoryMetrics(
-                total_bytes=16 * 1024**3,
-                used_bytes=int(16 * 1024**3 * mem_used / 100),
-                free_bytes=int(16 * 1024**3 * (100 - mem_used) / 100),
-                available_bytes=int(16 * 1024**3 * (100 - mem_used) / 100),
-                cached_bytes=0,
-                buffers_bytes=0,
-                swap_used_bytes=0,
-                swap_total_bytes=0,
-                used_percent=mem_used,
-                assessment="test",
-            ),
-            load=LoadMetrics(
-                load_1m=load_1m,
-                load_5m=load_1m,
-                load_15m=load_1m,
-                runnable=1,
-                nprocs=100,
-                assessment="test",
-            ),
+        snapshot = system_snapshot_factory(
+            cpu_idle=cpu_idle,
+            mem_used_percent=mem_used,
+            load_1m=load_1m,
+            ncpu=ncpu,
         )
 
         result = _build_fallback_diagnosis(snapshot)

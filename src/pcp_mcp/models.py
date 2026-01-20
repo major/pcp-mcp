@@ -162,3 +162,23 @@ class DiagnosisResult(BaseModel):
     diagnosis: str = Field(description="LLM-generated analysis of system health")
     severity: str = Field(description="Severity level: healthy, warning, or critical")
     recommendations: list[str] = Field(description="Actionable recommendations")
+
+
+class FilesystemInfo(BaseModel):
+    """Information about a single mounted filesystem."""
+
+    mount_point: str = Field(description="Filesystem mount point (e.g., /, /home)")
+    fs_type: str = Field(description="Filesystem type (e.g., ext4, xfs, tmpfs)")
+    capacity_bytes: int = Field(description="Total filesystem capacity in bytes")
+    used_bytes: int = Field(description="Used space in bytes")
+    available_bytes: int = Field(description="Available space in bytes (for non-root users)")
+    percent_full: float = Field(description="Percentage of filesystem in use")
+
+
+class FilesystemSnapshot(BaseModel):
+    """Point-in-time filesystem usage overview."""
+
+    timestamp: str = Field(description="ISO8601 timestamp")
+    hostname: str = Field(description="Target host name")
+    filesystems: list[FilesystemInfo] = Field(description="List of mounted filesystems")
+    assessment: str = Field(description="Brief interpretation of filesystem state")
