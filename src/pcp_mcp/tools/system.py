@@ -1,7 +1,7 @@
 """System health tools for clumped metric queries."""
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Literal, Optional
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 
 from fastmcp import Context
 from mcp.types import ToolAnnotations
@@ -10,15 +10,23 @@ from pydantic import Field
 from pcp_mcp.context import get_client_for_host
 from pcp_mcp.icons import (
     ICON_DIAGNOSE,
+    ICON_FILESYSTEM,
     ICON_HEALTH,
     ICON_PROCESS,
     ICON_SYSTEM,
     TAGS_DIAGNOSE,
+    TAGS_FILESYSTEM,
     TAGS_HEALTH,
     TAGS_PROCESS,
     TAGS_SYSTEM,
 )
-from pcp_mcp.models import DiagnosisResult, ProcessTopResult, SystemSnapshot
+from pcp_mcp.models import (
+    DiagnosisResult,
+    FilesystemInfo,
+    FilesystemSnapshot,
+    ProcessTopResult,
+    SystemSnapshot,
+)
 from pcp_mcp.utils.builders import (
     assess_processes,
     build_cpu_metrics,
@@ -95,6 +103,15 @@ PROCESS_METRICS = {
     "io": ["proc.io.read_bytes", "proc.io.write_bytes"],
     "info": ["proc.psinfo.pid", "proc.psinfo.cmd", "proc.psinfo.psargs"],
 }
+
+FILESYSTEM_METRICS = [
+    "filesys.mountdir",
+    "filesys.capacity",
+    "filesys.used",
+    "filesys.avail",
+    "filesys.full",
+    "filesys.type",
+]
 
 
 async def _fetch_system_snapshot(
@@ -378,6 +395,102 @@ def register_system_tools(mcp: "FastMCP") -> None:
             return result
         except Exception:
             return _build_fallback_diagnosis(snapshot)
+
+    @mcp.tool(
+        annotations=TOOL_ANNOTATIONS,
+        output_schema=FilesystemSnapshot.model_json_schema(),
+        icons=[ICON_FILESYSTEM],
+        tags=TAGS_FILESYSTEM,
+    )
+    async def get_filesystem_usage(
+        ctx: Context,
+        host: Annotated[
+            Optional[str],
+            Field(description="Target pmcd host to query (default: server's configured target)"),
+        ] = None,
+    ) -> FilesystemSnapshot:
+        """Get mounted filesystem usage (similar to df command).
+
+        Returns capacity, used, available, and percent full for each mounted
+        filesystem. Useful for monitoring disk space and identifying filesystems
+        that may need attention.
+
+        Examples:
+            get_filesystem_usage() - Check all filesystems on default host
+            get_filesystem_usage(host="db1.example.com") - Check remote host
+        """
+        from pcp_mcp.errors import handle_pcp_error
+
+        async with get_client_for_host(ctx, host) as client:
+            try:
+                response = await client.fetch(FILESYSTEM_METRICS)
+            except Exception as e:
+                raise handle_pcp_error(e, "fetching filesystem metrics") from e
+
+            filesystems = _build_filesystem_list(response)
+            assessment = _assess_filesystems(filesystems)
+
+            return FilesystemSnapshot(
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                hostname=client.target_host,
+                filesystems=filesystems,
+                assessment=assessment,
+            )
+
+
+def _build_filesystem_list(response: dict) -> list[FilesystemInfo]:
+    """Build list of FilesystemInfo from pmproxy response."""
+    values = response.get("values", [])
+
+    metrics_by_name: dict[str, dict[int, Any]] = {}
+    for metric in values:
+        name = metric.get("name", "")
+        instances = metric.get("instances", [])
+        metrics_by_name[name] = {inst.get("instance", -1): inst.get("value") for inst in instances}
+
+    mountdir_instances = metrics_by_name.get("filesys.mountdir", {})
+
+    filesystems: list[FilesystemInfo] = []
+    for instance_id, mount_point in mountdir_instances.items():
+        if mount_point is None:
+            continue
+
+        capacity_kb = metrics_by_name.get("filesys.capacity", {}).get(instance_id, 0) or 0
+        used_kb = metrics_by_name.get("filesys.used", {}).get(instance_id, 0) or 0
+        avail_kb = metrics_by_name.get("filesys.avail", {}).get(instance_id, 0) or 0
+        percent_full = metrics_by_name.get("filesys.full", {}).get(instance_id, 0.0) or 0.0
+        fs_type = metrics_by_name.get("filesys.type", {}).get(instance_id, "unknown") or "unknown"
+
+        filesystems.append(
+            FilesystemInfo(
+                mount_point=mount_point,
+                fs_type=fs_type,
+                capacity_bytes=int(capacity_kb) * 1024,
+                used_bytes=int(used_kb) * 1024,
+                available_bytes=int(avail_kb) * 1024,
+                percent_full=float(percent_full),
+            )
+        )
+
+    filesystems.sort(key=lambda fs: fs.mount_point)
+    return filesystems
+
+
+def _assess_filesystems(filesystems: list[FilesystemInfo]) -> str:
+    """Generate assessment string for filesystem state."""
+    if not filesystems:
+        return "No filesystems found"
+
+    critical = [fs for fs in filesystems if fs.percent_full >= 90]
+    warning = [fs for fs in filesystems if 80 <= fs.percent_full < 90]
+
+    if critical:
+        mounts = ", ".join(fs.mount_point for fs in critical)
+        return f"🔴 Critical: {mounts} at 90%+ capacity"
+    if warning:
+        mounts = ", ".join(fs.mount_point for fs in warning)
+        return f"🟡 Warning: {mounts} at 80%+ capacity"
+    return "🟢 All filesystems healthy"
 
 
 def _format_snapshot_for_llm(snapshot: SystemSnapshot) -> str:

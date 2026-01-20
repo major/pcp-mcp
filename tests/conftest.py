@@ -10,6 +10,13 @@ import pytest
 
 from pcp_mcp.client import PCPClient
 from pcp_mcp.config import PCPMCPSettings
+from pcp_mcp.models import (
+    CPUMetrics,
+    FilesystemInfo,
+    LoadMetrics,
+    MemoryMetrics,
+    SystemSnapshot,
+)
 
 RegisterFn: TypeAlias = Callable[[MagicMock], None]
 ToolDict: TypeAlias = dict[str, Callable[..., Any]]
@@ -206,6 +213,79 @@ def full_system_snapshot_data(
 
 
 @pytest.fixture
+def filesystem_metrics_response() -> Callable[..., dict]:
+    """Factory for filesystem metrics pmproxy response format."""
+
+    def _make(
+        filesystems: list[dict] | None = None,
+    ) -> dict:
+        if filesystems is None:
+            filesystems = [
+                {
+                    "instance": 0,
+                    "mountdir": "/",
+                    "type": "ext4",
+                    "capacity": 100_000_000,
+                    "used": 20_000_000,
+                    "avail": 75_000_000,
+                    "full": 20.0,
+                },
+                {
+                    "instance": 1,
+                    "mountdir": "/boot",
+                    "type": "ext4",
+                    "capacity": 1_000_000,
+                    "used": 500_000,
+                    "avail": 450_000,
+                    "full": 50.0,
+                },
+            ]
+
+        return {
+            "values": [
+                {
+                    "name": "filesys.mountdir",
+                    "instances": [
+                        {"instance": fs["instance"], "value": fs["mountdir"]} for fs in filesystems
+                    ],
+                },
+                {
+                    "name": "filesys.capacity",
+                    "instances": [
+                        {"instance": fs["instance"], "value": fs["capacity"]} for fs in filesystems
+                    ],
+                },
+                {
+                    "name": "filesys.used",
+                    "instances": [
+                        {"instance": fs["instance"], "value": fs["used"]} for fs in filesystems
+                    ],
+                },
+                {
+                    "name": "filesys.avail",
+                    "instances": [
+                        {"instance": fs["instance"], "value": fs["avail"]} for fs in filesystems
+                    ],
+                },
+                {
+                    "name": "filesys.full",
+                    "instances": [
+                        {"instance": fs["instance"], "value": fs["full"]} for fs in filesystems
+                    ],
+                },
+                {
+                    "name": "filesys.type",
+                    "instances": [
+                        {"instance": fs["instance"], "value": fs["type"]} for fs in filesystems
+                    ],
+                },
+            ]
+        }
+
+    return _make
+
+
+@pytest.fixture
 def pmproxy_fetch_response() -> Callable[..., dict]:
     """Factory for pmproxy fetch API response format."""
 
@@ -325,5 +405,73 @@ def pmda_status_response() -> Callable[..., dict]:
                 }
             ]
         }
+
+    return _make
+
+
+@pytest.fixture
+def filesystem_info_factory() -> Callable[..., FilesystemInfo]:
+    def _make(
+        mount_point: str = "/",
+        fs_type: str = "ext4",
+        capacity_bytes: int = 100_000,
+        used_bytes: int = 20_000,
+        available_bytes: int = 80_000,
+        percent_full: float = 20.0,
+    ) -> FilesystemInfo:
+        return FilesystemInfo(
+            mount_point=mount_point,
+            fs_type=fs_type,
+            capacity_bytes=capacity_bytes,
+            used_bytes=used_bytes,
+            available_bytes=available_bytes,
+            percent_full=percent_full,
+        )
+
+    return _make
+
+
+@pytest.fixture
+def system_snapshot_factory() -> Callable[..., SystemSnapshot]:
+    def _make(
+        hostname: str = "testhost",
+        cpu_idle: float = 80.0,
+        mem_used_percent: float = 50.0,
+        load_1m: float = 1.0,
+        ncpu: int = 4,
+    ) -> SystemSnapshot:
+        total_mem = 16 * 1024**3
+        return SystemSnapshot(
+            timestamp="2025-01-18T12:00:00Z",
+            hostname=hostname,
+            cpu=CPUMetrics(
+                user_percent=100 - cpu_idle - 5,
+                system_percent=5.0,
+                idle_percent=cpu_idle,
+                iowait_percent=0.0,
+                ncpu=ncpu,
+                assessment="test",
+            ),
+            memory=MemoryMetrics(
+                total_bytes=total_mem,
+                used_bytes=int(total_mem * mem_used_percent / 100),
+                free_bytes=int(total_mem * (100 - mem_used_percent) / 100),
+                available_bytes=int(total_mem * (100 - mem_used_percent) / 100),
+                cached_bytes=0,
+                buffers_bytes=0,
+                swap_used_bytes=0,
+                swap_total_bytes=0,
+                used_percent=mem_used_percent,
+                assessment="test",
+            ),
+            load=LoadMetrics(
+                load_1m=load_1m,
+                load_5m=load_1m,
+                load_15m=load_1m,
+                runnable=1,
+                nprocs=100,
+                assessment="test",
+            ),
+        )
 
     return _make
