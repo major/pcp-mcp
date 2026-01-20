@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This project uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
 
+## v1.3.0 (2026-01-20)
+
+### Feat
+
+- **tools**: add get_filesystem_usage tool
+
 ## v1.2.0 (2026-01-19)
 
 ### Feat
