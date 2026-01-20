@@ -100,3 +100,47 @@ make complexity   # Fail on D+ complexity functions
 - **pmproxy**: Must be running for tests against real PCP
 - **Tests**: Use `respx` for httpx mocking, not real network
 - **Coverage**: Uploaded to Codecov on Python 3.14 only
+
+## REVIEW GUIDELINES
+
+Guidelines for AI code review (Codex `@codex review`, Copilot, Claude).
+
+### Security (P0)
+
+Flag immediately:
+- Credentials in logs or error messages (check f-strings, exception args)
+- `PCP_USERNAME`/`PCP_PASSWORD` exposed anywhere except config loading
+- User-supplied hostspecs not validated against `PCP_ALLOWED_HOSTS`
+- TLS verification disabled without explicit user opt-in
+- Empty `except:` blocks that swallow errors silently
+
+### Usability (P1)
+
+MCP tools must be LLM-friendly:
+- Tool responses MUST be Pydantic models with `assessment` fields for quick triage
+- Error messages MUST explain what failed AND suggest remediation
+- Tool parameter descriptions MUST use `Annotated[type, Field(description=...)]`
+- Counter metrics (CPU, disk, network) MUST use rate-calculating tools, not raw `query_metrics()`
+
+### Correctness (P1)
+
+- All httpx exceptions MUST be caught and converted via `handle_pcp_error()`
+- Async functions MUST NOT contain blocking calls
+- Exception chains MUST be preserved with `raise ... from e`
+- Rate calculations MUST handle elapsed_time=0 (division by zero)
+
+### Simplification (P2)
+
+Flag duplication opportunities:
+- Similar test patterns across 3+ tests → parameterize with `@pytest.mark.parametrize`
+- Repeated model construction in tests → add factory fixture to `conftest.py`
+- Similar error handling across tools → extract to shared helper
+- Inline imports in tests → move to module level or conftest
+
+### What NOT to Flag
+
+Automated tools handle these—skip them in review:
+- Style/formatting (ruff)
+- Type errors (ty)
+- Import order (ruff isort)
+- Line length (ruff)
