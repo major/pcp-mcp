@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This project uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
 
+## v1.3.1 (2026-01-27)
+
+### Fix
+
+- update deps
+
 ## v1.3.0 (2026-01-20)
 
 ### Feat
