@@ -90,6 +90,7 @@ Thumbs.db
 *.log
 .uv/
 opencode.json
+.sisyphus
 
 # Documentation
 site/
