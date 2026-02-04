@@ -14,7 +14,6 @@ MCP server for Performance Co-Pilot (PCP) metrics. Exposes system performance da
 pcp-mcp/
 ├── src/pcp_mcp/           # Core package (see src/pcp_mcp/AGENTS.md)
 │   ├── tools/             # MCP tools (see src/pcp_mcp/tools/AGENTS.md)
-│   ├── resources/         # MCP resources (read-only)
 │   ├── utils/             # Extractors, builders
 │   └── prompts/           # LLM system prompts
 ├── tests/                 # Test suite (see tests/AGENTS.md)
@@ -29,7 +28,6 @@ See subdirectory AGENTS.md files for detailed guidance on each module.
 | Task | Location |
 |------|----------|
 | Add new tool | `src/pcp_mcp/tools/` |
-| Add new resource | `src/pcp_mcp/resources/` |
 | Modify HTTP client | `src/pcp_mcp/client.py` |
 | Change config | `src/pcp_mcp/config.py` |
 | Add response model | `src/pcp_mcp/models.py` |
@@ -78,8 +76,7 @@ These are CUMULATIVE (since boot), NOT per-second rates:
 - **ALWAYS** return Pydantic models from tools
 - **ALWAYS** use `Annotated[type, Field(...)]` for tool params
 
-### Resources
-- Resources are READ-ONLY
+
 
 ## COMMANDS
 

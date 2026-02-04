@@ -18,7 +18,6 @@ pcp_mcp/
 ├── middleware.py   # Request caching middleware
 ├── icons.py        # System assessment icons (emoji mappings)
 ├── tools/          # MCP tools (see tools/AGENTS.md)
-├── resources/      # MCP resources (health.py, catalog.py)
 ├── utils/          # Extractors, builders
 └── prompts/        # LLM system prompts
 ```

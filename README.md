@@ -160,14 +160,6 @@ For remote monitoring:
 → Uses describe_metric(name="kernel.all.load")
 ```
 
-## 📚 Resources
-
-Browse metrics via MCP resources:
-
-- `pcp://health` - Quick system health summary
-- `pcp://metrics/common` - Catalog of commonly used metrics
-- `pcp://namespaces` - Live-discovered metric namespaces
-
 ## 💡 Use Cases
 
 ### Performance Troubleshooting

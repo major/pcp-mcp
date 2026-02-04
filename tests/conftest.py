@@ -20,7 +20,6 @@ from pcp_mcp.models import (
 
 RegisterFn: TypeAlias = Callable[[MagicMock], None]
 ToolDict: TypeAlias = dict[str, Callable[..., Any]]
-ResourceDict: TypeAlias = dict[str, Callable[..., Any]]
 
 
 # =============================================================================
@@ -358,26 +357,6 @@ def capture_tools() -> Callable[[RegisterFn], ToolDict]:
         mcp.tool = capture_tool
         register_fn(mcp)
         return tools
-
-    return factory
-
-
-@pytest.fixture
-def capture_resources() -> Callable[[RegisterFn], ResourceDict]:
-    def factory(register_fn: RegisterFn) -> ResourceDict:
-        resources: ResourceDict = {}
-
-        def capture_resource(uri: str, **_kwargs):
-            def decorator(fn):
-                resources[uri] = fn
-                return fn
-
-            return decorator
-
-        mcp = MagicMock()
-        mcp.resource = capture_resource
-        register_fn(mcp)
-        return resources
 
     return factory
 

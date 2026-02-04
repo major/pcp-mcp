@@ -11,7 +11,6 @@ Query system performance metrics via the Model Context Protocol - CPU, memory, d
 - **Metric Discovery** - Search and explore 1000+ PCP metrics
 - **Remote Monitoring** - Monitor any host running pmcd
 - **Real-time Data** - Direct access to PCP's high-resolution metrics
-- **MCP Resources** - Browse metrics via `pcp://` URIs
 
 ## Architecture
 

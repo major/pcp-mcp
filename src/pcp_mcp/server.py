@@ -108,13 +108,6 @@ Tools:
 - get_system_snapshot: System overview (CPU, memory, disk, network) - USE THIS FIRST
 - get_process_top: Top processes by resource consumption
 
-Resources:
-- pcp://health - Quick system health summary
-- pcp://host/{{hostname}}/health - Per-host health summary (template)
-- pcp://metric/{{name}}/info - Detailed metric metadata (template)
-- pcp://metrics/common - Catalog of commonly used metrics
-- pcp://namespaces - Dynamically discovered metric namespaces
-
 Prompts (invoke for guided troubleshooting workflows):
 - diagnose_slow_system: Complete slowness investigation
 - investigate_memory_usage: Memory pressure analysis
@@ -134,11 +127,9 @@ Prompts (invoke for guided troubleshooting workflows):
     mcp.add_middleware(MetricCacheMiddleware())
 
     from pcp_mcp.prompts import register_prompts
-    from pcp_mcp.resources import register_resources
     from pcp_mcp.tools import register_tools
 
     register_tools(mcp)
-    register_resources(mcp)
     register_prompts(mcp)
 
     return mcp

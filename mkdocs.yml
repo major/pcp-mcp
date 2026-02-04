@@ -74,16 +74,11 @@ nav:
       - System Snapshot: tools/system-snapshot.md
       - Process Monitoring: tools/processes.md
       - Metrics: tools/metrics.md
-  - Resources:
-      - resources/index.md
-      - Health Summary: resources/health.md
-      - Metric Catalogs: resources/catalog.md
   - API Reference:
       - Config: api/config.md
       - Models: api/models.md
       - Client: api/client.md
       - Tools: api/tools.md
-      - Resources: api/resources.md
       - Errors: api/errors.md
 
 extra:

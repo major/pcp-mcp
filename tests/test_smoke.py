@@ -37,20 +37,6 @@ class TestServerSmoke:
         missing = expected_tools - tool_names
         assert not missing, f"Missing tools: {missing}"
 
-    def test_resources_are_registered(self):
-        """All expected resources should be registered."""
-        server = create_server()
-        resource_uris = set(server._resource_manager._resources.keys())
-
-        expected_resources = {
-            "pcp://health",
-            "pcp://metrics/common",
-            "pcp://namespaces",
-        }
-
-        missing = expected_resources - resource_uris
-        assert not missing, f"Missing resources: {missing}"
-
     def test_prompts_are_registered(self):
         """All expected prompts should be registered."""
         server = create_server()
