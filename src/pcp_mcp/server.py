@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.server.middleware.logging import StructuredLoggingMiddleware
+from fastmcp.server.providers import FileSystemProvider
 
 from pcp_mcp.client import PCPClient
 from pcp_mcp.config import PCPMCPSettings
@@ -126,10 +128,12 @@ Prompts (invoke for guided troubleshooting workflows):
     )
     mcp.add_middleware(MetricCacheMiddleware())
 
-    from pcp_mcp.prompts import register_prompts
-    from pcp_mcp.tools import register_tools
-
-    register_tools(mcp)
-    register_prompts(mcp)
+    # Auto-discover tools and prompts from filesystem
+    base_dir = Path(__file__).parent
+    provider = FileSystemProvider(
+        root=base_dir,
+        reload=False,
+    )
+    mcp.add_provider(provider)
 
     return mcp
