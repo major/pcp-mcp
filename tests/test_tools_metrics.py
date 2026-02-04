@@ -7,14 +7,17 @@ from unittest.mock import MagicMock
 import pytest
 from fastmcp.exceptions import ToolError
 
-from pcp_mcp.tools.metrics import register_metrics_tools
+from pcp_mcp.tools.metrics import (
+    describe_metric,
+    query_metrics,
+    search_metrics,
+)
 
 
 class TestQueryMetrics:
     async def test_query_metrics_returns_values(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         mock_context.request_context.lifespan_context["client"].fetch.return_value = {
             "values": [
@@ -28,9 +31,7 @@ class TestQueryMetrics:
             ]
         }
 
-        tools = capture_tools(register_metrics_tools)
-
-        result = await tools["query_metrics"](mock_context, names=["kernel.all.load"])
+        result = await query_metrics(mock_context, names=["kernel.all.load"])
 
         assert len(result.structured_content["metrics"]) == 2
         assert result.structured_content["metrics"][0]["name"] == "kernel.all.load"
@@ -41,7 +42,6 @@ class TestQueryMetrics:
     async def test_query_metrics_handles_no_instance(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         mock_context.request_context.lifespan_context["client"].fetch.return_value = {
             "values": [
@@ -52,9 +52,7 @@ class TestQueryMetrics:
             ]
         }
 
-        tools = capture_tools(register_metrics_tools)
-
-        result = await tools["query_metrics"](mock_context, names=["hinv.ncpu"])
+        result = await query_metrics(mock_context, names=["hinv.ncpu"])
 
         assert len(result.structured_content["metrics"]) == 1
         assert result.structured_content["metrics"][0]["instance"] is None
@@ -63,7 +61,6 @@ class TestQueryMetrics:
     async def test_query_metrics_raises_on_error(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         import httpx
 
@@ -71,26 +68,21 @@ class TestQueryMetrics:
             "client"
         ].fetch.side_effect = httpx.ConnectError("Connection refused")
 
-        tools = capture_tools(register_metrics_tools)
-
         with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
-            await tools["query_metrics"](mock_context, names=["kernel.all.load"])
+            await query_metrics(mock_context, names=["kernel.all.load"])
 
 
 class TestSearchMetrics:
     async def test_search_metrics_returns_results(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         mock_context.request_context.lifespan_context["client"].search.return_value = [
             {"name": "kernel.all.cpu.user", "text-oneline": "User CPU time"},
             {"name": "kernel.all.cpu.sys", "text-help": "System CPU time"},
         ]
 
-        tools = capture_tools(register_metrics_tools)
-
-        result = await tools["search_metrics"](mock_context, pattern="kernel.all.cpu")
+        result = await search_metrics(mock_context, pattern="kernel.all.cpu")
 
         assert len(result.structured_content["results"]) == 2
         assert result.structured_content["results"][0]["name"] == "kernel.all.cpu.user"
@@ -100,20 +92,16 @@ class TestSearchMetrics:
     async def test_search_metrics_empty_results(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         mock_context.request_context.lifespan_context["client"].search.return_value = []
 
-        tools = capture_tools(register_metrics_tools)
-
-        result = await tools["search_metrics"](mock_context, pattern="nonexistent")
+        result = await search_metrics(mock_context, pattern="nonexistent")
 
         assert result.structured_content["results"] == []
 
     async def test_search_metrics_raises_on_error(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         import httpx
 
@@ -121,17 +109,14 @@ class TestSearchMetrics:
             "client"
         ].search.side_effect = httpx.ConnectError("Connection refused")
 
-        tools = capture_tools(register_metrics_tools)
-
         with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
-            await tools["search_metrics"](mock_context, pattern="kernel")
+            await search_metrics(mock_context, pattern="kernel")
 
 
 class TestDescribeMetric:
     async def test_describe_metric_returns_info(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {
             "name": "kernel.all.cpu.user",
@@ -141,9 +126,7 @@ class TestDescribeMetric:
             "text-help": "Time spent in user mode",
         }
 
-        tools = capture_tools(register_metrics_tools)
-
-        result = await tools["describe_metric"](mock_context, name="kernel.all.cpu.user")
+        result = await describe_metric(mock_context, name="kernel.all.cpu.user")
 
         assert result.structured_content["name"] == "kernel.all.cpu.user"
         assert result.structured_content["type"] == "U64"
@@ -154,14 +137,11 @@ class TestDescribeMetric:
     async def test_describe_metric_not_found(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         mock_context.request_context.lifespan_context["client"].describe.return_value = {}
 
-        tools = capture_tools(register_metrics_tools)
-
         with pytest.raises(ToolError, match="Metric not found"):
-            await tools["describe_metric"](mock_context, name="nonexistent.metric")
+            await describe_metric(mock_context, name="nonexistent.metric")
 
     @pytest.mark.parametrize(
         ("metric_info", "expected_units"),
@@ -176,7 +156,6 @@ class TestDescribeMetric:
     async def test_describe_metric_formats_units(
         self,
         mock_context: MagicMock,
-        capture_tools,
         metric_info: dict,
         expected_units: str,
     ) -> None:
@@ -187,16 +166,13 @@ class TestDescribeMetric:
             **metric_info,
         }
 
-        tools = capture_tools(register_metrics_tools)
-
-        result = await tools["describe_metric"](mock_context, name="test.metric")
+        result = await describe_metric(mock_context, name="test.metric")
 
         assert result.structured_content["units"] == expected_units
 
     async def test_describe_metric_raises_on_error(
         self,
         mock_context: MagicMock,
-        capture_tools,
     ) -> None:
         import httpx
 
@@ -204,7 +180,5 @@ class TestDescribeMetric:
             "client"
         ].describe.side_effect = httpx.ConnectError("Connection refused")
 
-        tools = capture_tools(register_metrics_tools)
-
         with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
-            await tools["describe_metric"](mock_context, name="kernel.all.load")
+            await describe_metric(mock_context, name="kernel.all.load")
