@@ -1,4 +1,8 @@
-"""Tests for error handling and mapping."""
+"""Tests for error handling and mapping.
+
+Note: These tests import error classes inside test methods to avoid stale class
+references after FastMCP's FileSystemProvider reloads modules during test runs.
+"""
 
 from __future__ import annotations
 
@@ -6,35 +10,30 @@ import httpx
 import pytest
 from fastmcp.exceptions import ToolError
 
-from pcp_mcp.errors import (
-    PCPConnectionError,
-    PCPError,
-    PCPMetricNotFoundError,
-    handle_pcp_error,
-)
+import pcp_mcp.errors
 
 
 class TestPCPErrorClasses:
     def test_pcp_error_is_base_exception(self) -> None:
-        err = PCPError("base error")
+        err = pcp_mcp.errors.PCPError("base error")
         assert isinstance(err, Exception)
         assert str(err) == "base error"
 
     def test_pcp_connection_error_inherits_from_pcp_error(self) -> None:
-        err = PCPConnectionError("cannot connect")
-        assert isinstance(err, PCPError)
+        err = pcp_mcp.errors.PCPConnectionError("cannot connect")
+        assert isinstance(err, pcp_mcp.errors.PCPError)
         assert str(err) == "cannot connect"
 
     def test_pcp_metric_not_found_error_inherits_from_pcp_error(self) -> None:
-        err = PCPMetricNotFoundError("metric.not.found")
-        assert isinstance(err, PCPError)
+        err = pcp_mcp.errors.PCPMetricNotFoundError("metric.not.found")
+        assert isinstance(err, pcp_mcp.errors.PCPError)
         assert str(err) == "metric.not.found"
 
 
 class TestHandlePCPError:
     def test_handles_httpx_connect_error(self) -> None:
         err = httpx.ConnectError("Connection refused")
-        result = handle_pcp_error(err, "fetching metrics")
+        result = pcp_mcp.errors.handle_pcp_error(err, "fetching metrics")
 
         assert isinstance(result, ToolError)
         assert "Cannot connect to pmproxy" in str(result)
@@ -45,7 +44,7 @@ class TestHandlePCPError:
         request = httpx.Request("GET", "http://localhost/pmapi/fetch")
         err = httpx.HTTPStatusError("Bad request", request=request, response=response)
 
-        result = handle_pcp_error(err, "fetching metrics")
+        result = pcp_mcp.errors.handle_pcp_error(err, "fetching metrics")
 
         assert isinstance(result, ToolError)
         assert "Bad request during fetching metrics" in str(result)
@@ -56,7 +55,7 @@ class TestHandlePCPError:
         request = httpx.Request("GET", "http://localhost/pmapi/fetch")
         err = httpx.HTTPStatusError("Not found", request=request, response=response)
 
-        result = handle_pcp_error(err, "describing metric")
+        result = pcp_mcp.errors.handle_pcp_error(err, "describing metric")
 
         assert isinstance(result, ToolError)
         assert "Metric not found during describing metric" in str(result)
@@ -66,7 +65,7 @@ class TestHandlePCPError:
         request = httpx.Request("GET", "http://localhost/pmapi/fetch")
         err = httpx.HTTPStatusError("Server error", request=request, response=response)
 
-        result = handle_pcp_error(err, "fetching")
+        result = pcp_mcp.errors.handle_pcp_error(err, "fetching")
 
         assert isinstance(result, ToolError)
         assert "pmproxy error (500)" in str(result)
@@ -75,23 +74,23 @@ class TestHandlePCPError:
     def test_handles_httpx_timeout(self) -> None:
         err = httpx.TimeoutException("Request timed out")
 
-        result = handle_pcp_error(err, "searching metrics")
+        result = pcp_mcp.errors.handle_pcp_error(err, "searching metrics")
 
         assert isinstance(result, ToolError)
         assert "Request timed out during searching metrics" in str(result)
 
     def test_handles_pcp_connection_error(self) -> None:
-        err = PCPConnectionError("Custom connection failure")
+        err = pcp_mcp.errors.PCPConnectionError("Custom connection failure")
 
-        result = handle_pcp_error(err, "connecting")
+        result = pcp_mcp.errors.handle_pcp_error(err, "connecting")
 
         assert isinstance(result, ToolError)
         assert "Custom connection failure" in str(result)
 
     def test_handles_pcp_metric_not_found_error(self) -> None:
-        err = PCPMetricNotFoundError("kernel.nonexistent")
+        err = pcp_mcp.errors.PCPMetricNotFoundError("kernel.nonexistent")
 
-        result = handle_pcp_error(err, "fetching")
+        result = pcp_mcp.errors.handle_pcp_error(err, "fetching")
 
         assert isinstance(result, ToolError)
         assert "Metric not found: kernel.nonexistent" in str(result)
@@ -99,7 +98,7 @@ class TestHandlePCPError:
     def test_handles_generic_exception(self) -> None:
         err = ValueError("Unexpected value")
 
-        result = handle_pcp_error(err, "processing data")
+        result = pcp_mcp.errors.handle_pcp_error(err, "processing data")
 
         assert isinstance(result, ToolError)
         assert "Error during processing data" in str(result)
@@ -121,7 +120,7 @@ class TestHandlePCPError:
         request = httpx.Request("GET", "http://localhost/pmapi/fetch")
         err = httpx.HTTPStatusError("HTTP error", request=request, response=response)
 
-        result = handle_pcp_error(err, "operation")
+        result = pcp_mcp.errors.handle_pcp_error(err, "operation")
 
         assert isinstance(result, ToolError)
         assert expected_substring in str(result)

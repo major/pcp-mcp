@@ -21,6 +21,10 @@ class PCPMetricNotFoundError(PCPError):
 def handle_pcp_error(e: Exception, operation: str) -> ToolError:
     """Convert PCP/httpx exceptions to MCP ToolErrors.
 
+    Uses isinstance() checks instead of match/case class patterns for resilience
+    against module reloading (e.g., FastMCP's FileSystemProvider), which can
+    create different class identities that break structural pattern matching.
+
     Args:
         e: The exception to convert.
         operation: Description of the operation that failed.
@@ -28,20 +32,23 @@ def handle_pcp_error(e: Exception, operation: str) -> ToolError:
     Returns:
         A ToolError with an appropriate message.
     """
-    match e:
-        case httpx.ConnectError():
-            return ToolError("Cannot connect to pmproxy. Is it running? (systemctl start pmproxy)")
-        case httpx.HTTPStatusError() as he if he.response.status_code == 400:
-            return ToolError(f"Bad request during {operation}: {he.response.text}")
-        case httpx.HTTPStatusError() as he if he.response.status_code == 404:
+    if isinstance(e, httpx.ConnectError):
+        return ToolError("Cannot connect to pmproxy. Is it running? (systemctl start pmproxy)")
+
+    if isinstance(e, httpx.HTTPStatusError):
+        if e.response.status_code == 400:
+            return ToolError(f"Bad request during {operation}: {e.response.text}")
+        if e.response.status_code == 404:
             return ToolError(f"Metric not found during {operation}")
-        case httpx.HTTPStatusError() as he:
-            return ToolError(f"pmproxy error ({he.response.status_code}): {he.response.text}")
-        case httpx.TimeoutException():
-            return ToolError(f"Request timed out during {operation}")
-        case PCPConnectionError():
-            return ToolError(str(e))
-        case PCPMetricNotFoundError():
-            return ToolError(f"Metric not found: {e}")
-        case _:
-            return ToolError(f"Error during {operation}: {e}")
+        return ToolError(f"pmproxy error ({e.response.status_code}): {e.response.text}")
+
+    if isinstance(e, httpx.TimeoutException):
+        return ToolError(f"Request timed out during {operation}")
+
+    if isinstance(e, PCPMetricNotFoundError):
+        return ToolError(f"Metric not found: {e}")
+
+    if isinstance(e, PCPConnectionError):
+        return ToolError(str(e))
+
+    return ToolError(f"Error during {operation}: {e}")
