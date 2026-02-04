@@ -145,11 +145,11 @@ class TestDescribeMetric:
 
         result = await tools["describe_metric"](mock_context, name="kernel.all.cpu.user")
 
-        assert result.name == "kernel.all.cpu.user"
-        assert result.type == "U64"
-        assert result.semantics == "counter"
-        assert result.units == "millisec"
-        assert result.help_text == "Time spent in user mode"
+        assert result.structured_content["name"] == "kernel.all.cpu.user"
+        assert result.structured_content["type"] == "U64"
+        assert result.structured_content["semantics"] == "counter"
+        assert result.structured_content["units"] == "millisec"
+        assert result.structured_content["help_text"] == "Time spent in user mode"
 
     async def test_describe_metric_not_found(
         self,
@@ -191,7 +191,7 @@ class TestDescribeMetric:
 
         result = await tools["describe_metric"](mock_context, name="test.metric")
 
-        assert result.units == expected_units
+        assert result.structured_content["units"] == expected_units
 
     async def test_describe_metric_raises_on_error(
         self,

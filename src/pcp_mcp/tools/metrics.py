@@ -3,6 +3,7 @@
 from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastmcp import Context
+from fastmcp.tools.tool import ToolResult
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
@@ -143,6 +144,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
         output_schema=MetricInfo.model_json_schema(),
         icons=[ICON_INFO],
         tags=TAGS_METRICS | TAGS_DISCOVERY,
+        timeout=30.0,
     )
     async def describe_metric(
         ctx: Context,
@@ -154,7 +156,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> MetricInfo:
+    ) -> ToolResult:
         """Get detailed metadata about a PCP metric.
 
         Returns type, semantics, units, and help text for the metric.
@@ -179,11 +181,15 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
             if not info:
                 raise ToolError(f"Metric not found: {name}")
 
-            return MetricInfo(
+            result = MetricInfo(
                 name=info.get("name", name),
                 type=info.get("type", "unknown"),
                 semantics=info.get("sem", "unknown"),
                 units=format_units(info),
                 help_text=extract_help_text(info),
                 indom=info.get("indom"),
+            )
+            return ToolResult(
+                content=result.model_dump_json(),
+                structured_content=result.model_dump(),
             )
