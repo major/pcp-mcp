@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 This project uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
 
+## v1.4.0 (2026-02-04)
+
+### Feat
+
+- **tools**: migrate system tools to ToolResult with timeout
+- **tools**: migrate query_metrics and search_metrics to ToolResult
+- **tools**: migrate describe_metric to ToolResult with timeout
+
+### Fix
+
+- resolve class identity issue with module reload in tests
+- **tests**: use mock lifespan in smoke tests for CI
+
+### Refactor
+
+- **server**: use FileSystemProvider for tool/prompt discovery
+- **prompts**: migrate prompts to standalone @prompt decorator
+- **tools**: migrate system.py to standalone @tool decorator
+- **tools**: migrate metrics.py to standalone @tool decorator
+
 ## v1.3.2 (2026-02-04)
 
 ### Refactor
