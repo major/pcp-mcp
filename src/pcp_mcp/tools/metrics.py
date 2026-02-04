@@ -1,5 +1,6 @@
 """Core metric tools for querying PCP metrics."""
 
+import json
 from typing import TYPE_CHECKING, Annotated, Optional
 
 from fastmcp import Context
@@ -20,7 +21,6 @@ from pcp_mcp.models import (
     MetricSearchResult,
     MetricSearchResultList,
     MetricValue,
-    MetricValueList,
 )
 from pcp_mcp.utils.extractors import extract_help_text, format_units
 
@@ -37,6 +37,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
         annotations=TOOL_ANNOTATIONS,
         icons=[ICON_METRICS],
         tags=TAGS_METRICS,
+        timeout=30.0,
     )
     async def query_metrics(
         ctx: Context,
@@ -48,7 +49,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> MetricValueList:
+    ) -> ToolResult:
         """Fetch current values for specific PCP metrics.
 
         Returns the current value for each requested metric. For metrics with
@@ -92,12 +93,16 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
                         )
                     )
 
-            return MetricValueList(metrics=results)
+            return ToolResult(
+                content=json.dumps([v.model_dump() for v in results]),
+                structured_content={"metrics": [v.model_dump() for v in results]},
+            )
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
         icons=[ICON_SEARCH],
         tags=TAGS_METRICS | TAGS_DISCOVERY,
+        timeout=30.0,
     )
     async def search_metrics(
         ctx: Context,
@@ -109,7 +114,7 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> MetricSearchResultList:
+    ) -> ToolResult:
         """Find PCP metrics matching a name pattern.
 
         Use this to discover available metrics before querying them.
@@ -137,7 +142,11 @@ def register_metrics_tools(mcp: "FastMCP") -> None:
                 )
                 for m in metrics
             ]
-            return MetricSearchResultList(results=results)
+            result = MetricSearchResultList(results=results)
+            return ToolResult(
+                content=result.model_dump_json(),
+                structured_content=result.model_dump(),
+            )
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
