@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, TypeAlias
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastmcp import FastMCP
 
 from pcp_mcp.client import PCPClient
 from pcp_mcp.config import PCPMCPSettings
@@ -22,6 +25,51 @@ RegisterFn: TypeAlias = Callable[[MagicMock], None]
 ToolDict: TypeAlias = dict[str, Callable[..., Any]]
 
 
+# =============================================================================
+# Smoke Test Server Fixture - Server without real pmproxy connection
+# =============================================================================
+
+
+@asynccontextmanager
+async def _mock_lifespan(mcp: FastMCP) -> AsyncIterator[dict[str, Any]]:
+    """No-op lifespan for smoke tests that doesn't connect to pmproxy.
+
+    Yields a mock context with AsyncMock client and real settings.
+    Allows testing tool/prompt registration without network access.
+    """
+    mock_client = AsyncMock(spec=PCPClient)
+    mock_client.target_host = "localhost"
+    mock_client.context_id = 12345
+    yield {"client": mock_client, "settings": PCPMCPSettings()}
+
+
+@pytest.fixture
+def smoke_test_server() -> FastMCP:
+    """Create a server with mock lifespan for smoke tests.
+
+    This server uses a no-op lifespan that doesn't connect to pmproxy,
+    allowing smoke tests to run in CI without a real PCP installation.
+    Uses FileSystemProvider for tool/prompt discovery just like production.
+    """
+    from fastmcp.server.middleware.logging import StructuredLoggingMiddleware
+    from fastmcp.server.providers import FileSystemProvider
+
+    from pcp_mcp.middleware import MetricCacheMiddleware
+
+    mcp = FastMCP(name="pcp", lifespan=_mock_lifespan)
+    mcp.add_middleware(StructuredLoggingMiddleware(include_payload_length=True))
+    mcp.add_middleware(MetricCacheMiddleware())
+
+    # Use FileSystemProvider same as production server
+    base_dir = Path(__file__).parent.parent / "src" / "pcp_mcp"
+    provider = FileSystemProvider(root=base_dir, reload=False)
+    mcp.add_provider(provider)
+
+    return mcp
+
+
+# =============================================================================
+# Metric Data Factories - Use these like to build test data without duplication
 # =============================================================================
 # Metric Data Factories - Use these to build test data without duplication
 # =============================================================================
