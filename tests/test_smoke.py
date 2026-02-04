@@ -2,10 +2,13 @@
 
 These tests verify that the server can start and tools register correctly,
 catching registration-time failures like missing imports or type errors.
-Does NOT require pmproxy - accesses server internals directly.
+Uses FastMCP's public Client API to avoid private API dependencies.
 """
 
+from __future__ import annotations
+
 import pytest
+from fastmcp import Client
 
 from pcp_mcp.server import create_server
 
@@ -13,16 +16,19 @@ from pcp_mcp.server import create_server
 class TestServerSmoke:
     """Smoke tests for server initialization and tool discovery."""
 
-    def test_server_creates_successfully(self):
+    def test_server_creates_successfully(self) -> None:
         """Server creation should not raise any exceptions."""
         server = create_server()
         assert server is not None
         assert server.name == "pcp"
 
-    def test_tools_are_registered(self):
+    @pytest.mark.asyncio
+    async def test_tools_are_registered(self) -> None:
         """All expected tools should be registered."""
         server = create_server()
-        tool_names = {t.name for t in server._tool_manager._tools.values()}
+        async with Client(server) as client:
+            tools = await client.list_tools()
+            tool_names = {t.name for t in tools}
 
         expected_tools = {
             "query_metrics",
@@ -37,10 +43,13 @@ class TestServerSmoke:
         missing = expected_tools - tool_names
         assert not missing, f"Missing tools: {missing}"
 
-    def test_prompts_are_registered(self):
+    @pytest.mark.asyncio
+    async def test_prompts_are_registered(self) -> None:
         """All expected prompts should be registered."""
         server = create_server()
-        prompt_names = set(server._prompt_manager._prompts.keys())
+        async with Client(server) as client:
+            prompts = await client.list_prompts()
+            prompt_names = {p.name for p in prompts}
 
         expected_prompts = {
             "diagnose_slow_system",
@@ -53,6 +62,7 @@ class TestServerSmoke:
         missing = expected_prompts - prompt_names
         assert not missing, f"Missing prompts: {missing}"
 
+    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "tool_name",
         [
@@ -65,11 +75,13 @@ class TestServerSmoke:
             "smart_diagnose",
         ],
     )
-    def test_tool_has_valid_schema(self, tool_name: str):
+    async def test_tool_has_valid_schema(self, tool_name: str) -> None:
         """Each tool should have a valid input schema."""
         server = create_server()
-        tools = {t.name: t for t in server._tool_manager._tools.values()}
+        async with Client(server) as client:
+            tools = await client.list_tools()
+            tools_dict = {t.name: t for t in tools}
 
-        tool = tools.get(tool_name)
+        tool = tools_dict.get(tool_name)
         assert tool is not None, f"Tool {tool_name} not found"
-        assert tool.parameters is not None, f"Tool {tool_name} has no parameters schema"
+        assert tool.inputSchema is not None, f"Tool {tool_name} has no input schema"
