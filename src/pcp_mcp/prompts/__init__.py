@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from fastmcp import FastMCP
+from fastmcp.prompts import prompt
 
 from pcp_mcp.icons import (
     ICON_CPU,
@@ -17,25 +18,15 @@ from pcp_mcp.icons import (
     TAGS_NETWORK,
 )
 
-if TYPE_CHECKING:
-    from fastmcp import FastMCP
 
+@prompt(icons=[ICON_DIAGNOSE], tags=TAGS_DIAGNOSE)
+def diagnose_slow_system() -> str:
+    """Diagnose why a system is running slowly.
 
-def register_prompts(mcp: FastMCP) -> None:
-    """Register diagnostic prompts with the MCP server.
-
-    Args:
-        mcp: The FastMCP server instance.
+    Returns a structured investigation workflow to identify performance
+    bottlenecks by examining CPU, memory, disk, and network metrics.
     """
-
-    @mcp.prompt(icons=[ICON_DIAGNOSE], tags=TAGS_DIAGNOSE)
-    def diagnose_slow_system() -> str:
-        """Diagnose why a system is running slowly.
-
-        Returns a structured investigation workflow to identify performance
-        bottlenecks by examining CPU, memory, disk, and network metrics.
-        """
-        return """Investigate system slowness:
+    return """Investigate system slowness:
 
 1. Get baseline: get_system_snapshot(categories=["cpu", "memory", "load", "disk", "network"])
 
@@ -74,14 +65,15 @@ def register_prompts(mcp: FastMCP) -> None:
    - Recommendations (kill process, add RAM, optimize queries, etc.)
 """
 
-    @mcp.prompt(icons=[ICON_MEMORY], tags=TAGS_MEMORY)
-    def investigate_memory_usage() -> str:
-        """Investigate memory consumption and identify memory pressure.
 
-        Returns a workflow to analyze memory utilization, identify memory
-        hogs, and distinguish between normal cache usage and actual pressure.
-        """
-        return """Memory investigation workflow:
+@prompt(icons=[ICON_MEMORY], tags=TAGS_MEMORY)
+def investigate_memory_usage() -> str:
+    """Investigate memory consumption and identify memory pressure.
+
+    Returns a workflow to analyze memory utilization, identify memory
+    hogs, and distinguish between normal cache usage and actual pressure.
+    """
+    return """Memory investigation workflow:
 
 1. Get memory overview:
    - Run: get_system_snapshot(categories=["memory"])
@@ -126,14 +118,15 @@ def register_prompts(mcp: FastMCP) -> None:
      * Single process consuming >50% = Investigate for memory leak
 """
 
-    @mcp.prompt(icons=[ICON_DISK], tags=TAGS_DISK)
-    def find_io_bottleneck() -> str:
-        """Find disk I/O bottlenecks and identify processes causing high I/O.
 
-        Returns a workflow to diagnose disk performance issues, identify
-        hot devices, and find I/O-intensive processes.
-        """
-        return """Disk I/O investigation:
+@prompt(icons=[ICON_DISK], tags=TAGS_DISK)
+def find_io_bottleneck() -> str:
+    """Find disk I/O bottlenecks and identify processes causing high I/O.
+
+    Returns a workflow to diagnose disk performance issues, identify
+    hot devices, and find I/O-intensive processes.
+    """
+    return """Disk I/O investigation:
 
 1. Get system-wide I/O snapshot:
    - Run: get_system_snapshot(categories=["disk", "cpu"])
@@ -187,14 +180,15 @@ def register_prompts(mcp: FastMCP) -> None:
      * Backup/batch jobs during business hours → Reschedule
 """
 
-    @mcp.prompt(icons=[ICON_CPU], tags=TAGS_CPU)
-    def analyze_cpu_usage() -> str:
-        """Analyze CPU utilization patterns and identify CPU-bound processes.
 
-        Returns a workflow to diagnose high CPU usage, distinguish between
-        user-space and kernel CPU time, and identify optimization opportunities.
-        """
-        return """CPU usage analysis workflow:
+@prompt(icons=[ICON_CPU], tags=TAGS_CPU)
+def analyze_cpu_usage() -> str:
+    """Analyze CPU utilization patterns and identify CPU-bound processes.
+
+    Returns a workflow to diagnose high CPU usage, distinguish between
+    user-space and kernel CPU time, and identify optimization opportunities.
+    """
+    return """CPU usage analysis workflow:
 
 1. Get CPU baseline:
    - Run: get_system_snapshot(categories=["cpu", "load"])
@@ -248,14 +242,15 @@ def register_prompts(mcp: FastMCP) -> None:
      * Many small processes → Reduce process spawning overhead
 """
 
-    @mcp.prompt(icons=[ICON_NETWORK], tags=TAGS_NETWORK)
-    def check_network_performance() -> str:
-        """Check network performance and identify bandwidth/error issues.
 
-        Returns a workflow to analyze network throughput, identify saturated
-        interfaces, and detect packet loss or errors.
-        """
-        return """Network performance investigation:
+@prompt(icons=[ICON_NETWORK], tags=TAGS_NETWORK)
+def check_network_performance() -> str:
+    """Check network performance and identify bandwidth/error issues.
+
+    Returns a workflow to analyze network throughput, identify saturated
+    interfaces, and detect packet loss or errors.
+    """
+    return """Network performance investigation:
 
 1. Get network overview:
    - Run: get_system_snapshot(categories=["network"])
@@ -306,3 +301,29 @@ def register_prompts(mcp: FastMCP) -> None:
      * Asymmetric traffic → Normal for client (download heavy) or server (upload heavy)
      * High packet rate + low byte rate → Small packets (check for SYN flood, fragmentation)
 """
+
+
+__all__ = [
+    "diagnose_slow_system",
+    "investigate_memory_usage",
+    "find_io_bottleneck",
+    "analyze_cpu_usage",
+    "check_network_performance",
+    "register_prompts",
+]
+
+
+def register_prompts(mcp: FastMCP) -> None:
+    """Register all prompts with the MCP server.
+
+    Args:
+        mcp: The FastMCP server instance.
+    """
+    for prompt_func in [
+        diagnose_slow_system,
+        investigate_memory_usage,
+        find_io_bottleneck,
+        analyze_cpu_usage,
+        check_network_performance,
+    ]:
+        mcp.add_prompt(prompt_func)

@@ -8,33 +8,31 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pcp_mcp.prompts import register_prompts
+from pcp_mcp.prompts import (
+    analyze_cpu_usage,
+    check_network_performance,
+    diagnose_slow_system,
+    find_io_bottleneck,
+    investigate_memory_usage,
+    register_prompts,
+)
 
 
 @pytest.fixture
-def capture_prompts() -> Callable[[Callable[[MagicMock], None]], dict[str, Callable[..., Any]]]:
-    def factory(register_fn: Callable[[MagicMock], None]) -> dict[str, Callable[..., Any]]:
-        prompts: dict[str, Callable[..., Any]] = {}
-
-        def capture_prompt(**_kwargs):
-            def decorator(fn):
-                prompts[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp = MagicMock()
-        mcp.prompt = capture_prompt
-        register_fn(mcp)
-        return prompts
-
-    return factory
+def prompts_dict() -> dict[str, Callable[..., Any]]:
+    """Return a dictionary of all prompt functions."""
+    return {
+        "diagnose_slow_system": diagnose_slow_system,
+        "investigate_memory_usage": investigate_memory_usage,
+        "find_io_bottleneck": find_io_bottleneck,
+        "analyze_cpu_usage": analyze_cpu_usage,
+        "check_network_performance": check_network_performance,
+    }
 
 
 class TestRegisterPrompts:
-    def test_registers_all_prompts(self, capture_prompts) -> None:
-        prompts = capture_prompts(register_prompts)
-
+    def test_registers_all_prompts(self, prompts_dict) -> None:
+        """Test that all prompts are registered."""
         expected_prompts = {
             "diagnose_slow_system",
             "investigate_memory_usage",
@@ -42,7 +40,15 @@ class TestRegisterPrompts:
             "analyze_cpu_usage",
             "check_network_performance",
         }
-        assert set(prompts.keys()) == expected_prompts
+        assert set(prompts_dict.keys()) == expected_prompts
+
+    def test_register_prompts_calls_add_prompt(self) -> None:
+        """Test that register_prompts calls mcp.add_prompt for each prompt."""
+        mcp = MagicMock()
+        register_prompts(mcp)
+
+        # Verify add_prompt was called 5 times (once for each prompt)
+        assert mcp.add_prompt.call_count == 5
 
 
 class TestPromptContent:
@@ -72,10 +78,13 @@ class TestPromptContent:
         ],
     )
     def test_prompt_contains_expected_keywords(
-        self, capture_prompts, prompt_name: str, expected_keywords: list[str]
+        self,
+        prompts_dict: dict[str, Callable[..., Any]],
+        prompt_name: str,
+        expected_keywords: list[str],
     ) -> None:
-        prompts = capture_prompts(register_prompts)
-        content = prompts[prompt_name]()
+        """Test that prompts contain expected keywords."""
+        content = prompts_dict[prompt_name]()
 
         for keyword in expected_keywords:
             assert keyword.lower() in content.lower(), f"'{keyword}' not found in {prompt_name}"

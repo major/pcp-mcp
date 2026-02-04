@@ -14,6 +14,7 @@ def register_tools(mcp: FastMCP) -> None:
     Args:
         mcp: The FastMCP server instance.
     """
+    from pcp_mcp.prompts import register_prompts
     from pcp_mcp.tools.metrics import (
         describe_metric,
         query_metrics,
@@ -35,3 +36,5 @@ def register_tools(mcp: FastMCP) -> None:
     mcp.add_tool(get_process_top)
     mcp.add_tool(smart_diagnose)
     mcp.add_tool(get_filesystem_usage)
+
+    register_prompts(mcp)
