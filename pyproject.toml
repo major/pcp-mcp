@@ -22,7 +22,7 @@ classifiers = [
 ]
 dependencies = [
     "cachetools>=5.0",
-    "fastmcp>=2.0.0",
+    "fastmcp>=3.0.0b1",
     "httpx>=0.27",
     "pydantic-settings>=2.0.0",
     "typing_extensions>=4.0; python_version < '3.11'",
