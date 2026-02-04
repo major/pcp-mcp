@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Optional
 
 from fastmcp import Context
+from fastmcp.tools.tool import ToolResult
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
@@ -169,9 +170,9 @@ def register_system_tools(mcp: "FastMCP") -> None:
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
-        output_schema=SystemSnapshot.model_json_schema(),
         icons=[ICON_SYSTEM],
         tags=TAGS_SYSTEM,
+        timeout=30.0,
     )
     async def get_system_snapshot(
         ctx: Context,
@@ -198,7 +199,7 @@ def register_system_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> SystemSnapshot:
+    ) -> ToolResult:
         """Get a point-in-time system health overview.
 
         Returns CPU, memory, disk I/O, network I/O, and load metrics in a single
@@ -218,13 +219,17 @@ def register_system_tools(mcp: "FastMCP") -> None:
         """
         if categories is None:
             categories = ["cpu", "memory", "disk", "network", "load"]
-        return await _fetch_system_snapshot(ctx, categories, sample_interval, host)
+        result = await _fetch_system_snapshot(ctx, categories, sample_interval, host)
+        return ToolResult(
+            content=result.model_dump_json(),
+            structured_content=result.model_dump(),
+        )
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
-        output_schema=SystemSnapshot.model_json_schema(),
         icons=[ICON_HEALTH],
         tags=TAGS_HEALTH,
+        timeout=30.0,
     )
     async def quick_health(
         ctx: Context,
@@ -232,7 +237,7 @@ def register_system_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> SystemSnapshot:
+    ) -> ToolResult:
         """Fast system health check returning only CPU and memory metrics.
 
         Use this for rapid status checks when you don't need disk/network/load
@@ -242,13 +247,17 @@ def register_system_tools(mcp: "FastMCP") -> None:
             quick_health() - Fast health check on default host
             quick_health(host="web1.example.com") - Fast check on remote host
         """
-        return await _fetch_system_snapshot(ctx, ["cpu", "memory"], 0.5, host)
+        result = await _fetch_system_snapshot(ctx, ["cpu", "memory"], 0.5, host)
+        return ToolResult(
+            content=result.model_dump_json(),
+            structured_content=result.model_dump(),
+        )
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
-        output_schema=ProcessTopResult.model_json_schema(),
         icons=[ICON_PROCESS],
         tags=TAGS_PROCESS,
+        timeout=30.0,
     )
     async def get_process_top(
         ctx: Context,
@@ -273,7 +282,7 @@ def register_system_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> ProcessTopResult:
+    ) -> ToolResult:
         """Get top processes by resource consumption.
 
         For CPU and I/O, takes two samples to calculate rates. Memory is instantaneous.
@@ -329,7 +338,7 @@ def register_system_tools(mcp: "FastMCP") -> None:
             assessment = assess_processes(processes, sort_by, ncpu)
 
             await ctx.report_progress(100, 100, "Complete")
-            return ProcessTopResult(
+            result = ProcessTopResult(
                 timestamp=datetime.now(timezone.utc).isoformat(),
                 hostname=client.target_host,
                 sort_by=sort_by,
@@ -339,12 +348,16 @@ def register_system_tools(mcp: "FastMCP") -> None:
                 ncpu=ncpu,
                 assessment=assessment,
             )
+            return ToolResult(
+                content=result.model_dump_json(),
+                structured_content=result.model_dump(),
+            )
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
-        output_schema=DiagnosisResult.model_json_schema(),
         icons=[ICON_DIAGNOSE],
         tags=TAGS_DIAGNOSE,
+        timeout=30.0,
     )
     async def smart_diagnose(
         ctx: Context,
@@ -352,7 +365,7 @@ def register_system_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> DiagnosisResult:
+    ) -> ToolResult:
         """Use LLM to analyze system metrics and provide diagnosis.
 
         Collects a quick system snapshot (CPU, memory, load) and asks the
@@ -392,15 +405,22 @@ def register_system_tools(mcp: "FastMCP") -> None:
             result = sampling_result.result
             result.timestamp = snapshot.timestamp
             result.hostname = snapshot.hostname
-            return result
+            return ToolResult(
+                content=result.model_dump_json(),
+                structured_content=result.model_dump(),
+            )
         except Exception:
-            return _build_fallback_diagnosis(snapshot)
+            result = _build_fallback_diagnosis(snapshot)
+            return ToolResult(
+                content=result.model_dump_json(),
+                structured_content=result.model_dump(),
+            )
 
     @mcp.tool(
         annotations=TOOL_ANNOTATIONS,
-        output_schema=FilesystemSnapshot.model_json_schema(),
         icons=[ICON_FILESYSTEM],
         tags=TAGS_FILESYSTEM,
+        timeout=30.0,
     )
     async def get_filesystem_usage(
         ctx: Context,
@@ -408,7 +428,7 @@ def register_system_tools(mcp: "FastMCP") -> None:
             Optional[str],
             Field(description="Target pmcd host to query (default: server's configured target)"),
         ] = None,
-    ) -> FilesystemSnapshot:
+    ) -> ToolResult:
         """Get mounted filesystem usage (similar to df command).
 
         Returns capacity, used, available, and percent full for each mounted
@@ -430,11 +450,15 @@ def register_system_tools(mcp: "FastMCP") -> None:
             filesystems = _build_filesystem_list(response)
             assessment = _assess_filesystems(filesystems)
 
-            return FilesystemSnapshot(
+            result = FilesystemSnapshot(
                 timestamp=datetime.now(timezone.utc).isoformat(),
                 hostname=client.target_host,
                 filesystems=filesystems,
                 assessment=assessment,
+            )
+            return ToolResult(
+                content=result.model_dump_json(),
+                structured_content=result.model_dump(),
             )
 
 

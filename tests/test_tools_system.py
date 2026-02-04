@@ -60,12 +60,12 @@ class TestGetSystemSnapshot:
         tools = capture_tools(register_system_tools)
         result = await tools["get_system_snapshot"](mock_context)
 
-        assert result.cpu is not None
-        assert result.memory is not None
-        assert result.load is not None
-        assert result.disk is not None
-        assert result.network is not None
-        assert result.hostname == "localhost"
+        assert result.structured_content["cpu"] is not None
+        assert result.structured_content["memory"] is not None
+        assert result.structured_content["load"] is not None
+        assert result.structured_content["disk"] is not None
+        assert result.structured_content["network"] is not None
+        assert result.structured_content["hostname"] == "localhost"
 
     async def test_returns_subset_categories(
         self,
@@ -80,11 +80,11 @@ class TestGetSystemSnapshot:
         tools = capture_tools(register_system_tools)
         result = await tools["get_system_snapshot"](mock_context, categories=["cpu"])
 
-        assert result.cpu is not None
-        assert result.memory is None
-        assert result.load is None
-        assert result.disk is None
-        assert result.network is None
+        assert result.structured_content["cpu"] is not None
+        assert result.structured_content["memory"] is None
+        assert result.structured_content["load"] is None
+        assert result.structured_content["disk"] is None
+        assert result.structured_content["network"] is None
 
     async def test_ignores_unknown_categories(
         self,
@@ -101,8 +101,8 @@ class TestGetSystemSnapshot:
             mock_context, categories=["cpu", "invalid_category", "also_invalid"]
         )
 
-        assert result.cpu is not None
-        assert result.memory is None
+        assert result.structured_content["cpu"] is not None
+        assert result.structured_content["memory"] is None
 
     async def test_reports_progress(
         self,
@@ -139,11 +139,11 @@ class TestQuickHealth:
         tools = capture_tools(register_system_tools)
         result = await tools["quick_health"](mock_context)
 
-        assert result.cpu is not None
-        assert result.memory is not None
-        assert result.load is None
-        assert result.disk is None
-        assert result.network is None
+        assert result.structured_content["cpu"] is not None
+        assert result.structured_content["memory"] is not None
+        assert result.structured_content["load"] is None
+        assert result.structured_content["disk"] is None
+        assert result.structured_content["network"] is None
 
     async def test_uses_shorter_sample_interval(
         self,
@@ -204,10 +204,10 @@ class TestGetProcessTop:
         tools = capture_tools(register_system_tools)
         result = await tools["get_process_top"](mock_context, sort_by=sort_by, limit=2)
 
-        assert len(result.processes) == 2
-        assert result.sort_by == sort_by
-        assert result.ncpu == 4
-        assert getattr(result.processes[0], expected_field) is not None
+        assert len(result.structured_content["processes"]) == 2
+        assert result.structured_content["sort_by"] == sort_by
+        assert result.structured_content["ncpu"] == 4
+        assert result.structured_content["processes"][0][expected_field] is not None
 
     async def test_reports_progress(
         self,
@@ -266,9 +266,9 @@ class TestSmartDiagnose:
         tools = capture_tools(register_system_tools)
         result = await tools["smart_diagnose"](mock_context)
 
-        assert result.severity == "healthy"
-        assert "healthy" in result.diagnosis.lower()
-        assert result.hostname == "localhost"
+        assert result.structured_content["severity"] == "healthy"
+        assert "healthy" in result.structured_content["diagnosis"].lower()
+        assert result.structured_content["hostname"] == "localhost"
         mock_context.sample.assert_called_once()
 
     async def test_uses_fallback_when_llm_fails(
@@ -292,9 +292,9 @@ class TestSmartDiagnose:
         tools = capture_tools(register_system_tools)
         result = await tools["smart_diagnose"](mock_context)
 
-        assert result.severity == "critical"
-        assert result.hostname == "localhost"
-        assert len(result.recommendations) > 0
+        assert result.structured_content["severity"] == "critical"
+        assert result.structured_content["hostname"] == "localhost"
+        assert len(result.structured_content["recommendations"]) > 0
 
 
 class TestFormatSnapshotForLlm:
@@ -350,12 +350,12 @@ class TestGetFilesystemUsage:
         tools = capture_tools(register_system_tools)
         result = await tools["get_filesystem_usage"](mock_context)
 
-        assert len(result.filesystems) == 2
-        assert result.hostname == "localhost"
-        assert result.filesystems[0].mount_point == "/"
-        assert result.filesystems[0].fs_type == "ext4"
-        assert result.filesystems[0].capacity_bytes == 100_000_000 * 1024
-        assert result.filesystems[0].percent_full == 20.0
+        assert len(result.structured_content["filesystems"]) == 2
+        assert result.structured_content["hostname"] == "localhost"
+        assert result.structured_content["filesystems"][0]["mount_point"] == "/"
+        assert result.structured_content["filesystems"][0]["fs_type"] == "ext4"
+        assert result.structured_content["filesystems"][0]["capacity_bytes"] == 100_000_000 * 1024
+        assert result.structured_content["filesystems"][0]["percent_full"] == 20.0
 
     async def test_handles_empty_filesystems(
         self,
@@ -370,8 +370,8 @@ class TestGetFilesystemUsage:
         tools = capture_tools(register_system_tools)
         result = await tools["get_filesystem_usage"](mock_context)
 
-        assert len(result.filesystems) == 0
-        assert "No filesystems found" in result.assessment
+        assert len(result.structured_content["filesystems"]) == 0
+        assert "No filesystems found" in result.structured_content["assessment"]
 
     async def test_sorts_by_mount_point(
         self,
@@ -415,7 +415,7 @@ class TestGetFilesystemUsage:
         tools = capture_tools(register_system_tools)
         result = await tools["get_filesystem_usage"](mock_context)
 
-        mount_points = [fs.mount_point for fs in result.filesystems]
+        mount_points = [fs["mount_point"] for fs in result.structured_content["filesystems"]]
         assert mount_points == ["/", "/home", "/var"]
 
 
