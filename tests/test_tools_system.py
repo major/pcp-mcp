@@ -14,8 +14,24 @@ from pcp_mcp.tools.system import (
     _build_fallback_diagnosis,
     _build_filesystem_list,
     _format_snapshot_for_llm,
-    register_system_tools,
+    get_filesystem_usage,
+    get_process_top,
+    get_system_snapshot,
+    quick_health,
+    smart_diagnose,
 )
+
+
+@pytest.fixture
+def system_tools() -> dict:
+    """Fixture providing all system tools as a dictionary."""
+    return {
+        "get_system_snapshot": get_system_snapshot,
+        "quick_health": quick_health,
+        "get_process_top": get_process_top,
+        "smart_diagnose": smart_diagnose,
+        "get_filesystem_usage": get_filesystem_usage,
+    }
 
 
 class TestToolErrorHandling:
@@ -31,7 +47,7 @@ class TestToolErrorHandling:
     async def test_handles_connection_error(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         tool_name: str,
         client_method: str,
         tool_kwargs: dict,
@@ -40,7 +56,7 @@ class TestToolErrorHandling:
             mock_context.request_context.lifespan_context["client"], client_method
         ).side_effect = httpx.ConnectError("Connection refused")
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
 
         with pytest.raises(ToolError, match="Cannot connect to pmproxy"):
             await tools[tool_name](mock_context, **tool_kwargs)
@@ -50,14 +66,14 @@ class TestGetSystemSnapshot:
     async def test_returns_all_categories(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         full_system_snapshot_data,
     ) -> None:
         mock_context.request_context.lifespan_context[
             "client"
         ].fetch_with_rates.return_value = full_system_snapshot_data()
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["get_system_snapshot"](mock_context)
 
         assert result.structured_content["cpu"] is not None
@@ -70,14 +86,14 @@ class TestGetSystemSnapshot:
     async def test_returns_subset_categories(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         cpu_metrics_data,
     ) -> None:
         mock_context.request_context.lifespan_context[
             "client"
         ].fetch_with_rates.return_value = cpu_metrics_data()
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["get_system_snapshot"](mock_context, categories=["cpu"])
 
         assert result.structured_content["cpu"] is not None
@@ -89,14 +105,14 @@ class TestGetSystemSnapshot:
     async def test_ignores_unknown_categories(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         cpu_metrics_data,
     ) -> None:
         mock_context.request_context.lifespan_context[
             "client"
         ].fetch_with_rates.return_value = cpu_metrics_data()
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["get_system_snapshot"](
             mock_context, categories=["cpu", "invalid_category", "also_invalid"]
         )
@@ -107,7 +123,7 @@ class TestGetSystemSnapshot:
     async def test_reports_progress(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         full_system_snapshot_data,
     ) -> None:
         mock_context.request_context.lifespan_context[
@@ -115,7 +131,7 @@ class TestGetSystemSnapshot:
         ].fetch_with_rates.return_value = full_system_snapshot_data()
         mock_context.report_progress = AsyncMock()
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         await tools["get_system_snapshot"](mock_context)
 
         assert mock_context.report_progress.call_count >= 2
@@ -127,7 +143,7 @@ class TestQuickHealth:
     async def test_returns_only_cpu_and_memory(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         cpu_metrics_data,
         memory_metrics_data,
     ) -> None:
@@ -136,7 +152,7 @@ class TestQuickHealth:
             "client"
         ].fetch_with_rates.return_value = combined_data
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["quick_health"](mock_context)
 
         assert result.structured_content["cpu"] is not None
@@ -148,7 +164,7 @@ class TestQuickHealth:
     async def test_uses_shorter_sample_interval(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         cpu_metrics_data,
         memory_metrics_data,
     ) -> None:
@@ -157,7 +173,7 @@ class TestQuickHealth:
             "client"
         ].fetch_with_rates.return_value = combined_data
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         await tools["quick_health"](mock_context)
 
         call_args = mock_context.request_context.lifespan_context[
@@ -188,7 +204,7 @@ class TestGetProcessTop:
     async def test_returns_top_processes_sorted(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         process_metrics_data,
         system_info_response: dict,
         sort_by: str,
@@ -201,7 +217,7 @@ class TestGetProcessTop:
             "client"
         ].fetch.return_value = system_info_response
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["get_process_top"](mock_context, sort_by=sort_by, limit=2)
 
         assert len(result.structured_content["processes"]) == 2
@@ -212,7 +228,7 @@ class TestGetProcessTop:
     async def test_reports_progress(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         process_metrics_data,
     ) -> None:
         mock_context.request_context.lifespan_context[
@@ -226,7 +242,7 @@ class TestGetProcessTop:
         }
         mock_context.report_progress = AsyncMock()
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         await tools["get_process_top"](mock_context)
 
         assert mock_context.report_progress.call_count >= 2
@@ -238,7 +254,7 @@ class TestSmartDiagnose:
     async def test_returns_llm_diagnosis(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         cpu_metrics_data,
         memory_metrics_data,
         load_metrics_data,
@@ -263,7 +279,7 @@ class TestSmartDiagnose:
         mock_sampling_result.result = llm_result
         mock_context.sample = AsyncMock(return_value=mock_sampling_result)
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["smart_diagnose"](mock_context)
 
         assert result.structured_content["severity"] == "healthy"
@@ -274,7 +290,7 @@ class TestSmartDiagnose:
     async def test_uses_fallback_when_llm_fails(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         cpu_metrics_data,
         memory_metrics_data,
         load_metrics_data,
@@ -289,7 +305,7 @@ class TestSmartDiagnose:
         ].fetch_with_rates.return_value = combined_data
         mock_context.sample = AsyncMock(side_effect=RuntimeError("LLM not available"))
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["smart_diagnose"](mock_context)
 
         assert result.structured_content["severity"] == "critical"
@@ -340,14 +356,14 @@ class TestGetFilesystemUsage:
     async def test_returns_filesystem_info(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         filesystem_metrics_response,
     ) -> None:
         mock_context.request_context.lifespan_context[
             "client"
         ].fetch.return_value = filesystem_metrics_response()
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["get_filesystem_usage"](mock_context)
 
         assert len(result.structured_content["filesystems"]) == 2
@@ -360,14 +376,14 @@ class TestGetFilesystemUsage:
     async def test_handles_empty_filesystems(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         filesystem_metrics_response,
     ) -> None:
         mock_context.request_context.lifespan_context[
             "client"
         ].fetch.return_value = filesystem_metrics_response(filesystems=[])
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["get_filesystem_usage"](mock_context)
 
         assert len(result.structured_content["filesystems"]) == 0
@@ -376,7 +392,7 @@ class TestGetFilesystemUsage:
     async def test_sorts_by_mount_point(
         self,
         mock_context: MagicMock,
-        capture_tools,
+        system_tools: dict,
         filesystem_metrics_response,
     ) -> None:
         filesystems = [
@@ -412,7 +428,7 @@ class TestGetFilesystemUsage:
             "client"
         ].fetch.return_value = filesystem_metrics_response(filesystems=filesystems)
 
-        tools = capture_tools(register_system_tools)
+        tools = system_tools
         result = await tools["get_filesystem_usage"](mock_context)
 
         mount_points = [fs["mount_point"] for fs in result.structured_content["filesystems"]]

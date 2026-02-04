@@ -19,9 +19,19 @@ def register_tools(mcp: FastMCP) -> None:
         query_metrics,
         search_metrics,
     )
-    from pcp_mcp.tools.system import register_system_tools
+    from pcp_mcp.tools.system import (
+        get_filesystem_usage,
+        get_process_top,
+        get_system_snapshot,
+        quick_health,
+        smart_diagnose,
+    )
 
     mcp.add_tool(query_metrics)
     mcp.add_tool(search_metrics)
     mcp.add_tool(describe_metric)
-    register_system_tools(mcp)
+    mcp.add_tool(get_system_snapshot)
+    mcp.add_tool(quick_health)
+    mcp.add_tool(get_process_top)
+    mcp.add_tool(smart_diagnose)
+    mcp.add_tool(get_filesystem_usage)
