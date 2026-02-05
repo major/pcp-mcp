@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 This project uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
 
+## v1.5.0 (2026-02-05)
+
+### Feat
+
+- add Fedora packaging with Packit automation
+
 ## v1.4.0 (2026-02-04)
 
 ### Feat
