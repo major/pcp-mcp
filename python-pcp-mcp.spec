@@ -1,3 +1,4 @@
+# Test Packit integration
 Name:           python-pcp-mcp
 Version:        1.3.2
 Release:        1%{?dist}
