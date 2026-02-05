@@ -8,10 +8,13 @@ from __future__ import annotations
 from pcp_mcp.models import (
     CPUMetrics,
     DiskMetrics,
+    InterfaceErrors,
     LoadMetrics,
     MemoryMetrics,
     NetworkMetrics,
     ProcessInfo,
+    TCPStats,
+    UDPStats,
 )
 from pcp_mcp.utils.extractors import get_first_value, sum_instances
 
@@ -278,12 +281,100 @@ def assess_processes(processes: list[ProcessInfo], sort_by: str, ncpu: int) -> s
     return f"Top process: {top.command}"
 
 
+def build_tcp_stats(data: dict) -> TCPStats:
+    """Build TCP protocol statistics from fetched data."""
+    active_opens = get_first_value(data, "network.tcp.activeopens")
+    passive_opens = get_first_value(data, "network.tcp.passiveopens")
+    attempt_fails = get_first_value(data, "network.tcp.attemptfails")
+    estab_resets = get_first_value(data, "network.tcp.estabresets")
+    current_estab = int(get_first_value(data, "network.tcp.currestab"))
+    retrans = get_first_value(data, "network.tcp.retranssegs")
+    in_errs = get_first_value(data, "network.tcp.inerrs")
+    out_rsts = get_first_value(data, "network.tcp.outrsts")
+
+    # Assess TCP health
+    if retrans > 100:
+        assessment = "Heavy retransmissions - significant packet loss or congestion"
+    elif retrans > 10:
+        assessment = "Moderate retransmissions - some packet loss"
+    elif attempt_fails > 10:
+        assessment = "High connection failure rate"
+    elif estab_resets > 10:
+        assessment = "Frequent connection resets - peers may be crashing or rejecting"
+    elif in_errs > 0:
+        assessment = "Receiving malformed TCP segments"
+    else:
+        assessment = "TCP health is normal"
+
+    return TCPStats(
+        active_opens_per_sec=round(active_opens, 2),
+        passive_opens_per_sec=round(passive_opens, 2),
+        attempt_fails_per_sec=round(attempt_fails, 2),
+        estab_resets_per_sec=round(estab_resets, 2),
+        current_established=current_estab,
+        retransmits_per_sec=round(retrans, 2),
+        in_errors_per_sec=round(in_errs, 2),
+        out_resets_per_sec=round(out_rsts, 2),
+        assessment=assessment,
+    )
+
+
+def build_udp_stats(data: dict) -> UDPStats:
+    """Build UDP protocol statistics from fetched data."""
+    in_dgrams = get_first_value(data, "network.udp.indatagrams")
+    out_dgrams = get_first_value(data, "network.udp.outdatagrams")
+    in_errs = get_first_value(data, "network.udp.inerrors")
+    no_ports = get_first_value(data, "network.udp.noports")
+
+    if in_errs > 10:
+        assessment = "High UDP receive error rate - possible data loss"
+    elif no_ports > 100:
+        assessment = "Many datagrams to closed ports - possible scan or misconfiguration"
+    elif in_errs > 0:
+        assessment = "Some UDP receive errors"
+    else:
+        assessment = "UDP health is normal"
+
+    return UDPStats(
+        in_datagrams_per_sec=round(in_dgrams, 2),
+        out_datagrams_per_sec=round(out_dgrams, 2),
+        in_errors_per_sec=round(in_errs, 2),
+        no_ports_per_sec=round(no_ports, 2),
+        assessment=assessment,
+    )
+
+
+def build_interface_errors(data: dict) -> list[InterfaceErrors]:
+    """Build per-interface error/drop rates from fetched data."""
+    in_errors = data.get("network.interface.in.errors", {}).get("instances", {})
+    out_errors = data.get("network.interface.out.errors", {}).get("instances", {})
+    in_drops = data.get("network.interface.in.drops", {}).get("instances", {})
+
+    all_ifaces = set(in_errors.keys()) | set(out_errors.keys()) | set(in_drops.keys())
+
+    results: list[InterfaceErrors] = []
+    for iface in sorted(all_ifaces):
+        results.append(
+            InterfaceErrors(
+                interface=str(iface),
+                in_errors_per_sec=round(float(in_errors.get(iface, 0)), 2),
+                out_errors_per_sec=round(float(out_errors.get(iface, 0)), 2),
+                in_drops_per_sec=round(float(in_drops.get(iface, 0)), 2),
+            )
+        )
+
+    return results
+
+
 __all__ = [
     "build_cpu_metrics",
     "build_memory_metrics",
     "build_load_metrics",
     "build_disk_metrics",
     "build_network_metrics",
+    "build_tcp_stats",
+    "build_udp_stats",
+    "build_interface_errors",
     "build_process_list",
     "get_sort_key",
     "assess_processes",

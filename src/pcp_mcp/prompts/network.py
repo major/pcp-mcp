@@ -32,11 +32,15 @@ def check_network_performance() -> str:
    - Note: These are COUNTERS, use get_system_snapshot for rates
    - Identify busy interfaces vs idle interfaces (e.g., eth0 busy, lo idle)
 
-4. Check for errors and drops:
-   - Run: query_metrics(["network.interface.in.errors", "network.interface.out.errors"])
-   - Run: query_metrics(["network.interface.in.drops", "network.interface.out.drops"])
-   - Non-zero errors = Hardware, driver, or cable issues
-   - Non-zero drops = Buffer overflow (traffic exceeds processing capacity)
+4. Check for errors, drops, and protocol health:
+   - Run: get_network_stats() for TCP/UDP stats and interface errors in one call
+   - TCP retransmits > 0 = Packet loss or congestion
+   - TCP attempt_fails > 0 = Services unreachable or firewall blocks
+   - TCP estab_resets > 0 = Peers crashing or rejecting connections
+   - TCP current_established = Connection count (high values may indicate leaks)
+   - UDP in_errors > 0 = Receive errors, possible data loss
+   - Interface in_errors/out_errors = Hardware, driver, or cable issues
+   - Interface in_drops = Buffer overflow (traffic exceeds processing capacity)
 
 5. Calculate interface saturation:
    - Compare throughput to link speed (e.g., 950 Mbps on 1 Gbps link = 95%)
@@ -48,10 +52,10 @@ def check_network_performance() -> str:
    - Use system tools: netstat, ss, iftop (outside PCP)
    - Or correlate: High network I/O often correlates with high CPU/disk I/O
 
-7. Check protocol-level stats (if needed):
-   - Run: search_metrics("network.tcp")
-   - Run: search_metrics("network.udp")
-   - Look for: Retransmissions, failed connections, buffer overflows
+7. Drill into specific protocol issues (if needed):
+   - Run: search_metrics("network.tcp") for all available TCP metrics
+   - Run: search_metrics("network.udp") for all available UDP metrics
+   - Use query_metrics() for raw counter values when deeper analysis is needed
 
 8. Report:
    - Per-interface throughput (e.g., "eth0: 850 Mbps in, 120 Mbps out")
