@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -20,9 +20,6 @@ from pcp_mcp.models import (
     MemoryMetrics,
     SystemSnapshot,
 )
-
-RegisterFn: TypeAlias = Callable[[MagicMock], None]
-ToolDict: TypeAlias = dict[str, Callable[..., Any]]
 
 
 # =============================================================================
@@ -387,26 +384,6 @@ def mock_context(mock_lifespan_context: dict[str, Any]) -> MagicMock:
     ctx.request_context.lifespan_context = mock_lifespan_context
     ctx.report_progress = AsyncMock()
     return ctx
-
-
-@pytest.fixture
-def capture_tools() -> Callable[[RegisterFn], ToolDict]:
-    def factory(register_fn: RegisterFn) -> ToolDict:
-        tools: ToolDict = {}
-
-        def capture_tool(**_kwargs):
-            def decorator(fn):
-                tools[fn.__name__] = fn
-                return fn
-
-            return decorator
-
-        mcp = MagicMock()
-        mcp.tool = capture_tool
-        register_fn(mcp)
-        return tools
-
-    return factory
 
 
 @pytest.fixture
