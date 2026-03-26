@@ -6,7 +6,7 @@
 
 ## OVERVIEW
 
-MCP server for Performance Co-Pilot (PCP) metrics. Exposes system performance data (CPU, memory, disk, network, processes) via Model Context Protocol tools and resources. Built on FastMCP 2.0+ with httpx async client for pmproxy REST API.
+MCP server for Performance Co-Pilot (PCP) metrics. Exposes system performance data (CPU, memory, disk, network, processes) via Model Context Protocol tools and resources. Built on FastMCP 3.1+ with httpx async client for pmproxy REST API.
 
 ## STRUCTURE
 
@@ -93,7 +93,7 @@ make complexity   # Fail on D+ complexity functions
 ## NOTES
 
 - **Python**: 3.10+ required (3.14 target)
-- **FastMCP**: 2.0+ required
+- **FastMCP**: 3.1+ required
 - **pmproxy**: Must be running for tests against real PCP
 - **Tests**: Use `respx` for httpx mocking, not real network
 - **Coverage**: Uploaded to Codecov on Python 3.14 only

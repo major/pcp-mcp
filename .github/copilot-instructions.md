@@ -16,10 +16,10 @@ When something could fail, explain **HOW** it would fail and suggest the prevent
 
 ## Project Context: pcp-mcp
 
-MCP (Model Context Protocol) server for Performance Co-Pilot (PCP). Python 3.10+, FastMCP 2.0+.
+MCP (Model Context Protocol) server for Performance Co-Pilot (PCP). Python 3.10+, FastMCP 3.1+.
 
 ### Tech Stack
-- **MCP Framework**: FastMCP 2.0+
+- **MCP Framework**: FastMCP 3.1+
 - **HTTP Client**: httpx (async)
 - **Backend**: pmproxy REST API
 - **Type checking**: ty
