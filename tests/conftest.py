@@ -21,7 +21,6 @@ from pcp_mcp.models import (
     SystemSnapshot,
 )
 
-
 # =============================================================================
 # Smoke Test Server Fixture - Server without real pmproxy connection
 # =============================================================================
