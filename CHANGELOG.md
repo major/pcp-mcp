@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 This project uses [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
 
+## v1.5.1 (2026-03-26)
+
+### Fix
+
+- **tests**: sort conftest.py imports after removing dead fixture
+- **tests**: add type narrowing for structured_content in metric tool tests
+
+### Refactor
+
+- update tools docs to actual patterns, remove dead fixture
+
 ## v1.5.0 (2026-02-05)
 
 ### Feat
