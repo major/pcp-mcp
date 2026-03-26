@@ -33,6 +33,7 @@ class TestQueryMetrics:
 
         result = await query_metrics(mock_context, names=["kernel.all.load"])
 
+        assert result.structured_content is not None
         assert len(result.structured_content["metrics"]) == 2
         assert result.structured_content["metrics"][0]["name"] == "kernel.all.load"
         assert result.structured_content["metrics"][0]["value"] == 1.5
@@ -54,6 +55,7 @@ class TestQueryMetrics:
 
         result = await query_metrics(mock_context, names=["hinv.ncpu"])
 
+        assert result.structured_content is not None
         assert len(result.structured_content["metrics"]) == 1
         assert result.structured_content["metrics"][0]["instance"] is None
         assert result.structured_content["metrics"][0]["value"] == 8
@@ -84,6 +86,7 @@ class TestSearchMetrics:
 
         result = await search_metrics(mock_context, pattern="kernel.all.cpu")
 
+        assert result.structured_content is not None
         assert len(result.structured_content["results"]) == 2
         assert result.structured_content["results"][0]["name"] == "kernel.all.cpu.user"
         assert result.structured_content["results"][0]["help_text"] == "User CPU time"
@@ -97,6 +100,7 @@ class TestSearchMetrics:
 
         result = await search_metrics(mock_context, pattern="nonexistent")
 
+        assert result.structured_content is not None
         assert result.structured_content["results"] == []
 
     async def test_search_metrics_raises_on_error(
@@ -128,6 +132,7 @@ class TestDescribeMetric:
 
         result = await describe_metric(mock_context, name="kernel.all.cpu.user")
 
+        assert result.structured_content is not None
         assert result.structured_content["name"] == "kernel.all.cpu.user"
         assert result.structured_content["type"] == "U64"
         assert result.structured_content["semantics"] == "counter"
@@ -168,6 +173,7 @@ class TestDescribeMetric:
 
         result = await describe_metric(mock_context, name="test.metric")
 
+        assert result.structured_content is not None
         assert result.structured_content["units"] == expected_units
 
     async def test_describe_metric_raises_on_error(
