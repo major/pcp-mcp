@@ -49,8 +49,10 @@ Provides:       pcp-mcp = %{version}-%{release}
 
 
 %generate_buildrequires
-# Use -g for PEP 735 dependency groups (dev group contains pytest, respx, etc.)
-%pyproject_buildrequires -g dev
+# Build-system deps only (-N skips runtime dep generation).
+# Test deps (fastmcp, respx, pytest-asyncio) aren't packaged for Fedora,
+# so %check is skipped here. CI handles testing via GitHub Actions.
+%pyproject_buildrequires -N
 
 
 %build
@@ -60,11 +62,6 @@ Provides:       pcp-mcp = %{version}-%{release}
 %install
 %pyproject_install
 %pyproject_save_files -l pcp_mcp
-
-
-%check
-# Run pytest without coverage (coverage adds overhead in rpmbuild)
-%pytest --no-cov
 
 
 %files -n python3-pcp-mcp -f %{pyproject_files}

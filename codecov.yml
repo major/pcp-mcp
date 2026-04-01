@@ -2,9 +2,10 @@ coverage:
   status:
     project:
       default:
-        # Allow coverage to drop by up to 1% without failing
-        # This prevents false failures when removing dead code
-        threshold: 1%
+        # Informational only - don't block PRs on overall coverage changes.
+        # Stale baselines cause false failures on dependency-only PRs.
+        informational: true
+        threshold: 2%
     patch:
       default:
         target: 90%
