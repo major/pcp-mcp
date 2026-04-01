@@ -31,3 +31,4 @@ TAGS_DISK = {"disk", "io", "troubleshooting", "performance"}
 TAGS_NETWORK = {"network", "troubleshooting", "performance"}
 TAGS_DIAGNOSE = {"diagnosis", "troubleshooting", "workflow"}
 TAGS_FILESYSTEM = {"filesystem", "storage", "disk", "capacity"}
+TAGS_NETWORK_STATS = {"network", "tcp", "udp", "protocol", "troubleshooting"}

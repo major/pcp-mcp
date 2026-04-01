@@ -164,6 +164,52 @@ class DiagnosisResult(BaseModel):
     recommendations: list[str] = Field(description="Actionable recommendations")
 
 
+class TCPStats(BaseModel):
+    """TCP protocol statistics."""
+
+    active_opens_per_sec: float = Field(description="Active connections initiated per second")
+    passive_opens_per_sec: float = Field(description="Passive connections accepted per second")
+    attempt_fails_per_sec: float = Field(description="Failed connection attempts per second")
+    estab_resets_per_sec: float = Field(description="Established connections reset per second")
+    current_established: int = Field(description="Currently established connections")
+    retransmits_per_sec: float = Field(description="Segments retransmitted per second")
+    in_errors_per_sec: float = Field(description="Segments received with errors per second")
+    out_resets_per_sec: float = Field(description="RST segments sent per second")
+    assessment: str = Field(description="Brief interpretation of TCP health")
+
+
+class UDPStats(BaseModel):
+    """UDP protocol statistics."""
+
+    in_datagrams_per_sec: float = Field(description="Datagrams received per second")
+    out_datagrams_per_sec: float = Field(description="Datagrams sent per second")
+    in_errors_per_sec: float = Field(description="Receive errors per second")
+    no_ports_per_sec: float = Field(description="Datagrams to unknown ports per second")
+    assessment: str = Field(description="Brief interpretation of UDP health")
+
+
+class InterfaceErrors(BaseModel):
+    """Per-interface error and drop counts."""
+
+    interface: str = Field(description="Network interface name")
+    in_errors_per_sec: float = Field(description="Receive errors per second")
+    out_errors_per_sec: float = Field(description="Transmit errors per second")
+    in_drops_per_sec: float = Field(description="Receive drops per second")
+
+
+class NetworkStatsSnapshot(BaseModel):
+    """TCP/UDP protocol statistics and interface error summary."""
+
+    timestamp: str = Field(description="ISO8601 timestamp")
+    hostname: str = Field(description="Target host name")
+    tcp: TCPStats | None = Field(default=None, description="TCP protocol statistics")
+    udp: UDPStats | None = Field(default=None, description="UDP protocol statistics")
+    interface_errors: list[InterfaceErrors] = Field(
+        default_factory=list, description="Per-interface error/drop rates"
+    )
+    assessment: str = Field(description="Overall network health assessment")
+
+
 class FilesystemInfo(BaseModel):
     """Information about a single mounted filesystem."""
 
