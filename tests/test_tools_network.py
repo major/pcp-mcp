@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, call
 
 import httpx
@@ -12,7 +11,6 @@ from fastmcp.exceptions import ToolError
 
 from pcp_mcp.tools.network import _assess_network_stats, get_network_stats
 from pcp_mcp.utils.builders import build_interface_errors, build_tcp_stats, build_udp_stats
-
 
 # =============================================================================
 # Fixtures
@@ -85,15 +83,9 @@ def interface_error_metrics_data() -> Callable[..., dict]:
         in_drops: dict[str, float] | None = None,
     ) -> dict:
         return {
-            "network.interface.in.errors": {
-                "instances": in_errors or {"eth0": 0.0, "lo": 0.0}
-            },
-            "network.interface.out.errors": {
-                "instances": out_errors or {"eth0": 0.0, "lo": 0.0}
-            },
-            "network.interface.in.drops": {
-                "instances": in_drops or {"eth0": 0.0, "lo": 0.0}
-            },
+            "network.interface.in.errors": {"instances": in_errors or {"eth0": 0.0, "lo": 0.0}},
+            "network.interface.out.errors": {"instances": out_errors or {"eth0": 0.0, "lo": 0.0}},
+            "network.interface.in.drops": {"instances": in_drops or {"eth0": 0.0, "lo": 0.0}},
         }
 
     return _make

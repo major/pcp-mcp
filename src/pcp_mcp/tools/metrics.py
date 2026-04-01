@@ -4,8 +4,7 @@ import json
 from typing import Annotated, Optional
 
 from fastmcp import Context
-from fastmcp.tools import tool
-from fastmcp.tools.tool import ToolResult
+from fastmcp.tools import ToolResult, tool
 from mcp.types import ToolAnnotations
 from pydantic import Field
 

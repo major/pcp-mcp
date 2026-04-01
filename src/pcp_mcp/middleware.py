@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from cachetools import TTLCache
 from fastmcp.server.middleware import Middleware
-from fastmcp.tools.tool import ToolResult
+from fastmcp.tools import ToolResult
 
 if TYPE_CHECKING:
     from fastmcp.server.middleware.middleware import CallNext, MiddlewareContext
